@@ -83,4 +83,9 @@ Separate Extraction
   riscv_extra
   riscv_params
   compiler
+  wasm_decl
+  wasm_instr_decl
+  wasm_extra
+  wasm_params
+  compiler_wasm
   wint_int.

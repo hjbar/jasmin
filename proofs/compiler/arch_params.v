@@ -77,3 +77,32 @@ Record architecture_params
        This considers possible different instructions and argument sizes. *)
     ap_is_move_op : asm_op_t -> bool;
   }.
+
+Record architecture_params_wasm `{asm_e : asm_extra} :=
+  {
+    (* Stack alloc parameters. See stack_alloc.v. *)
+    ap_sap_wasm : stack_alloc_params.stack_alloc_params;
+
+    (* true if load_constants_prog should be applied.
+       should return false for wasm
+    *)
+    ap_plp_wasm : bool;
+
+    (* Speculative execution operator lowering parameters. See
+       slh_lowering.v.
+       Shouls return None.
+    *)
+    ap_shp_wasm : slh_lowering.sh_params;
+
+    (* Assembly generation parameters. See asm_gen.v. *)
+    ap_agp_wasm : asm_gen.asm_gen_params;
+
+    (* ------------------------------------------------------------------------ *)
+    (* Shared across multiple passes. *)
+
+    (* Whether an instruction is a move instruction_proof.
+       This considers possible different instructions and argument sizes.
+       Should return false.
+    *)
+    ap_is_move_op_wasm : asm_op_t -> bool;
+  }.

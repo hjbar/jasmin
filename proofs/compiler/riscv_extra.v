@@ -20,7 +20,7 @@ Require Import
 Local Notation E n := (sopn.ADExplicit n sopn.ACR_any).
 
 #[only(eqbOK)] derive
-Variant riscv_extra_op : Type :=  
+Variant riscv_extra_op : Type :=
   | SWAP of wsize
   | Oriscv_add_large_imm.
 
@@ -57,7 +57,7 @@ Definition get_instr_desc (o: riscv_extra_op) : instruction_desc :=
   | SWAP ws => Oswap_instr (aword ws)
   | Oriscv_add_large_imm => Oriscv_add_large_imm_instr
    end.
-  
+
 (* Without priority 1, this instance is selected when looking for an [asmOp],
  * meaning that extra ops are the only possible ops. With that priority,
  * [arch_extra.asm_opI] is selected first and we have both base and extra ops.
@@ -107,7 +107,7 @@ Definition assemble_extra
            (outx: lexprs)
            (inx: rexprs)
            : cexec (seq (asm_op_msb_t * lexprs * rexprs)) :=
-  match o with   
+  match o with
   | SWAP sz =>
     if (sz == U32)%CMP then
       match outx, inx with
@@ -140,7 +140,7 @@ Definition assemble_extra
       ok (asm_args_of_opn_args (RISCVFopn_core.smart_addi x y imm))
     | _, _ =>
       Error (E.internal_error ii "bad riscv_add_large_imm: invalid args or dests")
-    end   
+    end
   end.
 
 #[ export ]

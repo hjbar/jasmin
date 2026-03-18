@@ -61,6 +61,7 @@ compiler/array_init.v
 compiler/array_init_proof.v
 compiler/compiler_util.v
 compiler/compiler.v
+compiler/compiler_wasm.v
 compiler/compiler_proof.v
 compiler/it_compiler_proof.v
 compiler/constant_prop.v
@@ -127,6 +128,13 @@ compiler/unionfind.v
 compiler/unionfind_proof.v
 compiler/unrolling.v
 compiler/unrolling_proof.v
+compiler/wasm.v
+compiler/wasm_decl.v
+compiler/wasm_instr_decl.v
+compiler/wasm_extra.v
+compiler/wasm_params.v
+compiler/wasm_params_core.v
+compiler/wasm_params_common.v
 compiler/wint_int.v
 compiler/wint_word.v
 compiler/wint_word_proof.v

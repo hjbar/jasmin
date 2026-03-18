@@ -1,8 +1,10 @@
 (** This module is meant as the minimal dependency of extracted code. *)
 Require compiler.
+Require compiler_wasm.
 Require psem_defs.
 Require arm_params.
 Require x86_params.
 Require riscv_params.
+Require wasm_params.
 Require sem_params_of_arch_extra.
 Require wint_int.
