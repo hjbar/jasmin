@@ -44,7 +44,7 @@ Module RISCVFopn_core.
 
   Definition smart_mov x y :=
     if v_var x == v_var y then [::] else [:: mov x y ].
-    
+
   (* Compute [R[x] := R[y] <o> imm % 2^32].
      Precondition: if [imm] is large, [y <> tmp]. *)
   Definition gen_smart_opi

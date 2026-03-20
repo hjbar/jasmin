@@ -77,150 +77,109 @@ let main () =
   try
     let infile = parse() in
 
-    let (module P : ArchWithAnalyze) =
-      match !target_arch with
-      | X86_64 ->
-         (module struct
-            module C = (val CoreArchFactory.core_arch_x86 ~use_lea:!lea ~use_set0:!set0 !call_conv)
-            module A = Arch_full.Arch_from_Core_arch (C)
-            module Safety = SafetyMain.Make (Jasmin_checksafety.X86_safety.X86_safety (A))
-            let analyze = Safety.analyze ?fmt:None
-          end)
-      | ARM_M4 ->
-         (module struct
-            module C = CoreArchFactory.Core_arch_ARM
-            module A = Arch_full.Arch_from_Core_arch (C)
-            open Jasmin_checksafety
-            module Safety = SafetyMain.Make (Jasmin_checksafety.Arm_safety.Arm_safety (A))
-            let analyze = Safety.analyze ?fmt:None
-          end)
-      | RISCV ->
-         (module struct
-            module C = CoreArchFactory.Core_arch_RISCV
-            module A = Arch_full.Arch_from_Core_arch (C)
-            open Jasmin_checksafety
-            module Safety = SafetyMain.Make (Jasmin_checksafety.Riscv_safety.Riscv_safety (A))
-            let analyze = Safety.analyze ?fmt:None
-          end)
-    in
-    let module Arch = P.A in
+    if !target_arch = WASM then begin
+      let module Core = CoreArchFactory.Core_arch_WASM in
+      let module Arch = Arch_full.Arch_from_Core_arch_wasm (Core) in
 
-    if !safety_makeconfigdoc <> None
-    then (
-      let dir = oget !safety_makeconfigdoc in
-      SafetyConfig.mk_config_doc dir;
-      exit 0);
+      if !safety_makeconfigdoc <> None then begin
+        let dir = oget !safety_makeconfigdoc in
+        SafetyConfig.mk_config_doc dir;
+        exit 0
+      end;
 
-    if !help_intrinsics
-    then (Help.show_intrinsics Arch.asmOp_sopn (); exit 0);
+      if !help_intrinsics then begin
+        Help.show_intrinsics Arch.asmOp_sopn ();
+        exit 0
+      end;
 
-    if !help_version
-    then (Format.printf "%s@." version_string; exit 0);
+      if !help_version then begin
+        Format.printf "%s@." version_string;
+        exit 0
+      end;
 
-    let () = if !check_safety then
-        match !safety_config with
-        | Some conf -> SafetyConfig.load_config conf
-        | None -> () in
+      let () =
+        if !check_safety then
+          match !safety_config with
+          | Some conf -> SafetyConfig.load_config conf
+          | None -> ()
+      in
 
-    let env, pprog, _ast =
-      try Compile.parse_file Arch.arch_info ~idirs:!Glob_options.idirs infile
-      with
-      | Annot.AnnotationError (loc, code) -> hierror ~loc:(Lone loc) ~kind:"annotation error" "%t" code
-      | Pretyping.TyError (loc, code) -> hierror ~loc:(Lone loc) ~kind:"typing error" "%a" Pretyping.pp_tyerror code
-      | Syntax.ParseError (loc, msg) ->
-          let msg =
-            match msg with
-            | None -> "unexpected token" (* default message *)
-            | Some msg -> msg
-          in
-          hierror ~loc:(Lone loc) ~kind:"parse error" "%s" msg
-    in
+      let env, pprog, _ast =
+        try Compile.parse_file Arch.arch_info ~idirs:!Glob_options.idirs infile
+        with
+        | Annot.AnnotationError (loc, code) -> hierror ~loc:(Lone loc) ~kind:"annotation error" "%t" code
+        | Pretyping.TyError (loc, code) -> hierror ~loc:(Lone loc) ~kind:"typing error" "%a" Pretyping.pp_tyerror code
+        | Syntax.ParseError (loc, msg) ->
+            let msg =
+              match msg with
+              | None -> "unexpected token" (* default message *)
+              | Some msg -> msg
+            in
+            hierror ~loc:(Lone loc) ~kind:"parse error" "%s" msg
+      in
 
-    if !print_dependencies then begin
-      Format.printf "%a"
-        (pp_list " " (fun fmt p -> Format.fprintf fmt "%s" (BatPathGen.OfString.to_string p)))
-        (List.tl (List.rev (Pretyping.Env.dependencies env)));
-      exit 0
-    end;
+      if !print_dependencies then begin
+        Format.printf "%a"
+          (pp_list " " (fun fmt p -> Format.fprintf fmt "%s" (BatPathGen.OfString.to_string p)))
+          (List.tl (List.rev (Pretyping.Env.dependencies env)));
+        exit 0
+      end;
 
-    (* Check if generated assembly labels will generate conflicts*)
-    let label_errors = Label_check.get_labels_errors pprog in
-    List.iter Label_check.warn_duplicate_label label_errors;
+      (* Check if generated assembly labels will generate conflicts *)
+      let label_errors = Label_check.get_labels_errors pprog in
+      List.iter Label_check.warn_duplicate_label label_errors;
 
-    eprint Compiler.Typing (Printer.pp_pprog ~debug:true Arch.pointer_data Arch.msf_size Arch.asmOp) pprog;
+      eprint Compiler.Typing (Printer.pp_pprog ~debug:true Arch.pointer_data Arch.msf_size Arch.asmOp) pprog;
 
-    let prog =
-      try Compile.preprocess Arch.pointer_data Arch.msf_size Arch.asmOp pprog
-      with Typing.TyError(loc, code) ->
-        hierror ~loc:(Lmore loc) ~kind:"typing error" "%s" code
-    in
+      let prog =
+        try Compile.preprocess Arch.pointer_data Arch.msf_size Arch.asmOp pprog
+        with Typing.TyError(loc, code) -> hierror ~loc:(Lmore loc) ~kind:"typing error" "%s" code
+      in
 
-    let prog =
-      if !slice <> []
-      then Slicing.slice !slice prog
-      else prog
-    in
+      let prog =
+        if !slice <> [] then Slicing.slice !slice prog
+        else prog
+      in
 
-    if to_warn Linter then begin
-      let open Linter in
-      let (_globs, funcs) = prog in
-      let funcs = List.map RDAnalyser.analyse_function funcs in
-      let vi_errors = VariableInitialisation.check_prog ([], funcs) in
-      let funcs = List.map LivenessAnalyser.analyse_function funcs in
-      let dv_errors = DeadVariables.check_prog ([], funcs) in
-      let open CompileError in
-      vi_errors @ dv_errors
-      |> List.filter (fun e -> e.level <= !Glob_options.linting_level)
-      |> List.iter (fun error ->
-          warning Linter (Location.i_loc0 error.location) "%t" error.to_text
-        )
-    end;
+      if to_warn Linter then begin
+        let open Linter in
+        let (_globs, funcs) = prog in
+        let funcs = List.map RDAnalyser.analyse_function funcs in
+        let vi_errors = VariableInitialisation.check_prog ([], funcs) in
+        let funcs = List.map LivenessAnalyser.analyse_function funcs in
+        let dv_errors = DeadVariables.check_prog ([], funcs) in
+        let open CompileError in
+        vi_errors @ dv_errors
+        |> List.filter (fun e -> e.level <= !Glob_options.linting_level)
+        |> List.iter (fun error ->
+            warning Linter (Location.i_loc0 error.location) "%t" error.to_text
+          )
+      end;
 
-    (* The source program, before any compilation pass. *)
-    let source_prog = prog in
+      (* FIXME : Some dummy visit_prog_after_pass function *)
+      let visit_prog_after_pass ~debug (s : Compiler_wasm.compiler_step) p =
+        eprint (Compile_utils.from_wasm_step s) (Printer.pp_prog ~debug Arch.pointer_data Arch.msf_size Arch.asmOp) p
+      in
+      visit_prog_after_pass ~debug:true Compiler_wasm.ParamsExpansion prog;
 
-    (* This function is called after each compilation pass.
-        - Check program safety (and exit) if the time has come
-        - Pretty-print the program
-        - Add your own checker here!
-    *)
-    let visit_prog_after_pass ~debug s p =
-      if s = SafetyConfig.sc_comp_pass () && !check_safety then
-        check_safety_p
-          Arch.pointer_data
-          Arch.msf_size
-          Arch.asmOp
-          P.analyze
-          s
-          p
-          source_prog
-        |> fun () -> exit 0
-      else
-        eprint s (Printer.pp_prog ~debug Arch.pointer_data Arch.msf_size Arch.asmOp) p
-    in
+      let prog =
+        match !Glob_options.do_auto_spill with
+        | None -> prog
+        | Some strategy -> AutoSpill.doit strategy prog
+      in
 
-    visit_prog_after_pass ~debug:true Compiler.ParamsExpansion prog;
+      (* Now call the coq compiler *)
+      let cprog = Conv.cuprog_of_prog prog in
 
-    let prog =
-      match !Glob_options.do_auto_spill with
-      | None -> prog
-      | Some strategy -> AutoSpill.doit strategy prog
-    in
+      if !debug then Printf.eprintf "translated to coq \n%!";
 
-    (* Now call the coq compiler *)
-    let cprog = Conv.cuprog_of_prog prog in
-
-    if !debug then Printf.eprintf "translated to coq \n%!";
-
-    let to_exec = Pretyping.Env.Exec.get env in
-    if to_exec <> [] then begin
+      let to_exec = Pretyping.Env.Exec.get env in
+      if to_exec <> [] then begin
         let exec { L.pl_loc = loc ; L.pl_desc = (f, m) } =
           let ii = L.i_loc0 loc, [] in
           try
-            let pp_range fmt (ptr, sz) =
-              Format.fprintf fmt "%a:%a" Z.pp_print ptr Z.pp_print sz in
-            Format.printf "/* Evaluation of %s (@[<h>%a@]):@." f.fn_name
-              (pp_list ",@ " pp_range) m;
+            let pp_range fmt (ptr, sz) = Format.fprintf fmt "%a:%a" Z.pp_print ptr Z.pp_print sz in
+            Format.printf "/* Evaluation of %s (@[<h>%a@]):@." f.fn_name (pp_list ",@ " pp_range) m;
             let _m, vs =
               (* TODO: allow to configure the initial stack pointer *)
               (match
@@ -228,14 +187,13 @@ let main () =
                with
                | Utils0.Ok m -> m
                | Utils0.Error err -> raise (Evaluator.Eval_error (ii, err)))
-              |> Evaluator.run
+              |> Evaluator.run_wasm
                    (module Arch)
                    (Expr.to_uprog Arch.asmOp cprog)
                    ii f []
             in
 
-            Format.printf "@[<v>%a@]@."
-              (pp_list "@ " Evaluator.pp_val) vs;
+            Format.printf "@[<v>%a@]@." (pp_list "@ " Evaluator.pp_val) vs;
             Format.printf "*/@."
           with Evaluator.Eval_error (ii,err) ->
             let i_loc, _ = ii in
@@ -244,26 +202,221 @@ let main () =
         List.iter exec to_exec
       end;
 
-    begin match Compile.compile (module Arch) visit_prog_after_pass prog cprog with
-    | Utils0.Error e ->
-      let e = Conv.error_of_cerror (Printer.pp_err ~debug:!debug) e in
-      raise (HiError e)
-    | Utils0.Ok asm ->
-      if !Glob_options.print_export_info_json then begin
-        Format.printf "%a" (fun fmt ->
-          PrintExportInfo.pp_export_info_json
-            fmt
-            env
-            prog)
-            asm
+      begin match Compile_wasm.compile (module Arch) visit_prog_after_pass prog cprog with
+      | Utils0.Error e ->
+        let e = Conv.error_of_cerror (Printer.pp_err ~debug:!debug) e in
+        raise (HiError e)
+      | Utils0.Ok _asm -> ()
+        (*
+        if !Glob_options.print_export_info_json then begin
+          Format.printf "%a" (fun fmt ->
+            PrintExportInfo.pp_export_info_json
+              fmt
+              env
+              prog)
+              asm
+        end;
+        if !outfile <> "" then begin
+          BatFile.with_file_out !outfile (fun out ->
+            let fmt = BatFormat.formatter_of_out_channel out in
+            Format.fprintf fmt "%a%!" Arch.pp_asm asm);
+            if !debug then Format.eprintf "assembly listing written@."
+        end else if List.mem Compiler_wasm.Assembly (List.map Compile_utils.to_wasm_step !print_list) then
+            Format.printf "%a%!" Arch.pp_asm asm
+        *)
+      end
+    end
+    else begin
+
+      let (module P : ArchWithAnalyze) =
+        match !target_arch with
+        | X86_64 ->
+           (module struct
+              module C = (val CoreArchFactory.core_arch_x86 ~use_lea:!lea ~use_set0:!set0 !call_conv)
+              module A = Arch_full.Arch_from_Core_arch (C)
+              module Safety = SafetyMain.Make (Jasmin_checksafety.X86_safety.X86_safety (A))
+              let analyze = Safety.analyze ?fmt:None
+            end)
+        | ARM_M4 ->
+           (module struct
+              module C = CoreArchFactory.Core_arch_ARM
+              module A = Arch_full.Arch_from_Core_arch (C)
+              open Jasmin_checksafety
+              module Safety = SafetyMain.Make (Jasmin_checksafety.Arm_safety.Arm_safety (A))
+              let analyze = Safety.analyze ?fmt:None
+            end)
+        | RISCV ->
+           (module struct
+              module C = CoreArchFactory.Core_arch_RISCV
+              module A = Arch_full.Arch_from_Core_arch (C)
+              open Jasmin_checksafety
+              module Safety = SafetyMain.Make (Jasmin_checksafety.Riscv_safety.Riscv_safety (A))
+              let analyze = Safety.analyze ?fmt:None
+            end)
+        | WASM -> assert false
+      in
+      let module Arch = P.A in
+
+      if !safety_makeconfigdoc <> None
+      then (
+        let dir = oget !safety_makeconfigdoc in
+        SafetyConfig.mk_config_doc dir;
+        exit 0);
+
+      if !help_intrinsics
+      then (Help.show_intrinsics Arch.asmOp_sopn (); exit 0);
+
+      if !help_version
+      then (Format.printf "%s@." version_string; exit 0);
+
+      let () = if !check_safety then
+          match !safety_config with
+          | Some conf -> SafetyConfig.load_config conf
+          | None -> () in
+
+      let env, pprog, _ast =
+        try Compile.parse_file Arch.arch_info ~idirs:!Glob_options.idirs infile
+        with
+        | Annot.AnnotationError (loc, code) -> hierror ~loc:(Lone loc) ~kind:"annotation error" "%t" code
+        | Pretyping.TyError (loc, code) -> hierror ~loc:(Lone loc) ~kind:"typing error" "%a" Pretyping.pp_tyerror code
+        | Syntax.ParseError (loc, msg) ->
+            let msg =
+              match msg with
+              | None -> "unexpected token" (* default message *)
+              | Some msg -> msg
+            in
+            hierror ~loc:(Lone loc) ~kind:"parse error" "%s" msg
+      in
+
+      if !print_dependencies then begin
+        Format.printf "%a"
+          (pp_list " " (fun fmt p -> Format.fprintf fmt "%s" (BatPathGen.OfString.to_string p)))
+          (List.tl (List.rev (Pretyping.Env.dependencies env)));
+        exit 0
       end;
-      if !outfile <> "" then begin
-        BatFile.with_file_out !outfile (fun out ->
-          let fmt = BatFormat.formatter_of_out_channel out in
-          Format.fprintf fmt "%a%!" Arch.pp_asm asm);
-          if !debug then Format.eprintf "assembly listing written@."
-      end else if List.mem Compiler.Assembly !print_list then
-          Format.printf "%a%!" Arch.pp_asm asm
+
+      (* Check if generated assembly labels will generate conflicts*)
+      let label_errors = Label_check.get_labels_errors pprog in
+      List.iter Label_check.warn_duplicate_label label_errors;
+
+      eprint Compiler.Typing (Printer.pp_pprog ~debug:true Arch.pointer_data Arch.msf_size Arch.asmOp) pprog;
+
+      let prog =
+        try Compile.preprocess Arch.pointer_data Arch.msf_size Arch.asmOp pprog
+        with Typing.TyError(loc, code) ->
+          hierror ~loc:(Lmore loc) ~kind:"typing error" "%s" code
+      in
+
+      let prog =
+        if !slice <> []
+        then Slicing.slice !slice prog
+        else prog
+      in
+
+      if to_warn Linter then begin
+        let open Linter in
+        let (_globs, funcs) = prog in
+        let funcs = List.map RDAnalyser.analyse_function funcs in
+        let vi_errors = VariableInitialisation.check_prog ([], funcs) in
+        let funcs = List.map LivenessAnalyser.analyse_function funcs in
+        let dv_errors = DeadVariables.check_prog ([], funcs) in
+        let open CompileError in
+        vi_errors @ dv_errors
+        |> List.filter (fun e -> e.level <= !Glob_options.linting_level)
+        |> List.iter (fun error ->
+            warning Linter (Location.i_loc0 error.location) "%t" error.to_text
+          )
+      end;
+
+      (* The source program, before any compilation pass. *)
+      let source_prog = prog in
+
+      (* This function is called after each compilation pass.
+          - Check program safety (and exit) if the time has come
+          - Pretty-print the program
+          - Add your own checker here!
+      *)
+      let visit_prog_after_pass ~debug s p =
+        if s = SafetyConfig.sc_comp_pass () && !check_safety then
+          check_safety_p
+            Arch.pointer_data
+            Arch.msf_size
+            Arch.asmOp
+            P.analyze
+            s
+            p
+            source_prog
+          |> fun () -> exit 0
+        else
+          eprint s (Printer.pp_prog ~debug Arch.pointer_data Arch.msf_size Arch.asmOp) p
+      in
+
+      visit_prog_after_pass ~debug:true Compiler.ParamsExpansion prog;
+
+      let prog =
+        match !Glob_options.do_auto_spill with
+        | None -> prog
+        | Some strategy -> AutoSpill.doit strategy prog
+      in
+
+      (* Now call the coq compiler *)
+      let cprog = Conv.cuprog_of_prog prog in
+
+      if !debug then Printf.eprintf "translated to coq \n%!";
+
+      let to_exec = Pretyping.Env.Exec.get env in
+      if to_exec <> [] then begin
+          let exec { L.pl_loc = loc ; L.pl_desc = (f, m) } =
+            let ii = L.i_loc0 loc, [] in
+            try
+              let pp_range fmt (ptr, sz) =
+                Format.fprintf fmt "%a:%a" Z.pp_print ptr Z.pp_print sz in
+              Format.printf "/* Evaluation of %s (@[<h>%a@]):@." f.fn_name
+                (pp_list ",@ " pp_range) m;
+              let _m, vs =
+                (* TODO: allow to configure the initial stack pointer *)
+                (match
+                   Evaluator.initial_memory Arch.reg_size (Z.of_string "1024") m
+                 with
+                 | Utils0.Ok m -> m
+                 | Utils0.Error err -> raise (Evaluator.Eval_error (ii, err)))
+                |> Evaluator.run
+                     (module Arch)
+                     (Expr.to_uprog Arch.asmOp cprog)
+                     ii f []
+              in
+
+              Format.printf "@[<v>%a@]@."
+                (pp_list "@ " Evaluator.pp_val) vs;
+              Format.printf "*/@."
+            with Evaluator.Eval_error (ii,err) ->
+              let i_loc, _ = ii in
+              hierror ~loc:(Lmore i_loc) ~kind:"evaluation error" "%a" Evaluator.pp_error err
+          in
+          List.iter exec to_exec
+        end;
+
+      begin match Compile.compile (module Arch) visit_prog_after_pass prog cprog with
+      | Utils0.Error e ->
+        let e = Conv.error_of_cerror (Printer.pp_err ~debug:!debug) e in
+        raise (HiError e)
+      | Utils0.Ok asm ->
+        if !Glob_options.print_export_info_json then begin
+          Format.printf "%a" (fun fmt ->
+            PrintExportInfo.pp_export_info_json
+              fmt
+              env
+              prog)
+              asm
+        end;
+        if !outfile <> "" then begin
+          BatFile.with_file_out !outfile (fun out ->
+            let fmt = BatFormat.formatter_of_out_channel out in
+            Format.fprintf fmt "%a%!" Arch.pp_asm asm);
+            if !debug then Format.eprintf "assembly listing written@."
+        end else if List.mem Compiler.Assembly !print_list then
+            Format.printf "%a%!" Arch.pp_asm asm
+      end
     end
   with
   | Utils.HiError e ->

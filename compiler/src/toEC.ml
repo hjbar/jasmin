@@ -1937,11 +1937,13 @@ struct
     | X86_64 -> "JModel_x86"
     | ARM_M4 -> "JModel_m4"
     | RISCV  -> "JModel_riscv"
+    | WASM   -> "JModel_wasm"
 
   let lib_slh env = match Env.arch env with
     | X86_64 -> "SLH64"
     | ARM_M4 -> "SLH32"
     | RISCV  -> "SLH32"
+    | WASM   -> "SLH64"
 
   let ec_glob_decl env (x,d) =
     let w_of_z ws z = Eapp (Eident [fmt_Wsz ws; "of_int"], [Econst z]) in

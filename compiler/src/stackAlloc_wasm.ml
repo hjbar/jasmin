@@ -1,7 +1,7 @@
 open Utils
 open Wsize
 open Prog
-open Regalloc
+open Regalloc_wasm
 
 let pp_var = Printer.pp_var ~debug:true
 
@@ -82,7 +82,7 @@ let pp_sao fmt sao =
     (Printer.pp_return_address ~debug:true) sao.sao_return_address
 
 let pp_oracle up fmt saos =
-  let open Compiler in
+  let open Compiler_wasm in
   let { ao_globals; ao_global_alloc; ao_stack_alloc } = saos in
   let pp_global fmt global =
     Format.fprintf fmt "%a" Z.pp_print (Conv.z_of_word U8 global)
@@ -97,7 +97,7 @@ let pp_oracle up fmt saos =
     (pp_list "@;" pp_slot) ao_global_alloc
     (pp_list "@;" pp_stack_alloc) fs
 
-module StackAlloc (Arch: Arch_full.Arch) = struct
+module StackAlloc (Arch: Arch_full.Arch_wasm) = struct
 
 module Regalloc = Regalloc (Arch)
 
@@ -163,7 +163,7 @@ let memory_analysis pp_sr pp_err ~debug up =
 
   if debug && !Glob_options.print_stack_alloc then begin
     let saos =
-      Compiler.({
+      Compiler_wasm.({
         ao_globals      = gao.gao_data;
         ao_global_alloc = cglobs;
         ao_stack_alloc  = get_sao
@@ -182,9 +182,9 @@ let memory_analysis pp_sr pp_err ~debug up =
         Arch.pointer_data
         Arch.msf_size
         Arch.asmOp
-        Arch.aparams.ap_shp
-        Arch.aparams.ap_sap
-        Arch.aparams.ap_is_move_op
+        Arch.aparams.ap_shp_wasm
+        Arch.aparams.ap_sap_wasm
+        Arch.aparams.ap_is_move_op_wasm
         (fun vk -> Conv.fresh_var_ident vk IInfo.dummy)
         pp_sr
         crip
@@ -200,6 +200,7 @@ let memory_analysis pp_sr pp_err ~debug up =
       raise (HiError e)
   in
 
+  (*
   let sp' =
     match Arch.aparams.ap_lap (Conv.fresh_var_ident (Reg (Normal, Direct)) IInfo.dummy (Uint63.of_int 0)) sp with
     | Utils0.Ok sp -> sp
@@ -207,6 +208,8 @@ let memory_analysis pp_sr pp_err ~debug up =
       let e = Conv.error_of_cerror pp_err e in
       raise (HiError e)
   in
+  *)
+  let sp' = sp in (* FIXME : it is OK ? *)
 
   let fds, _ = Conv.prog_of_csprog sp' in
 
@@ -234,7 +237,7 @@ let memory_analysis pp_sr pp_err ~debug up =
   let deadcode (extra, fd) =
     let (fn, cfd) = Conv.cufdef_of_fdef fd in
     let fd =
-      match Dead_code.dead_code_fd Arch.asmOp Arch.aparams.ap_is_move_op false tokeep fn cfd with
+      match Dead_code.dead_code_fd Arch.asmOp Arch.aparams.ap_is_move_op_wasm false tokeep fn cfd with
       | Utils0.Ok cfd -> Conv.fdef_of_cufdef (fn, cfd)
       | Utils0.Error _ -> assert false in
     (extra,fd) in
@@ -310,7 +313,7 @@ let memory_analysis pp_sr pp_err ~debug up =
   List.iter fix_subroutine_csao (List.rev fds);
 
   let return_addresses = Regalloc.create_return_addresses get_internal_size fds in
-  let subst, killed, fds = Regalloc.alloc_prog return_addresses fds in
+  (* let subst, killed, fds = Regalloc.alloc_prog return_addresses fds in *)
 
   let fix_csao (_, fd) =
     let fn = fd.f_name in
@@ -332,7 +335,7 @@ let memory_analysis pp_sr pp_err ~debug up =
     | Internal -> assert false
     | Export ->
 
-    let ro = Regalloc.get_reg_oracle has_stack subst killed fd in
+    let ro = { ro_to_save = []; ro_rsp = None; } (* Regalloc.get_reg_oracle has_stack subst killed fd *) in
     let sao = Hf.find sao fn in
     let csao = get_sao fn in
 
@@ -448,7 +451,7 @@ let memory_analysis pp_sr pp_err ~debug up =
   List.iter fix_csao (List.rev fds);
 
   let saos =
-    Compiler.({
+    Compiler_wasm.({
       ao_globals      = gao.gao_data;
       ao_global_alloc = cglobs;
       ao_stack_alloc  =

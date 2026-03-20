@@ -75,6 +75,7 @@ let load_and_analyze ~fmt expect path arch =
           module Safety = SafetyMain.Make (Jasmin_checksafety.Riscv_safety.Riscv_safety (A))
           let analyze = Safety.analyze
         end)
+    | WASM -> failwith "TODO"
   in
   let module Arch = P.A in
   Format.fprintf fmt "File %s (on arch %s):@." path (architecture_to_string arch);

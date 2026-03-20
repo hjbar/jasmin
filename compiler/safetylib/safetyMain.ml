@@ -20,4 +20,3 @@ end = struct
     let module AbsInt = SafetyInterpreter.AbsAnalyzer (Arch) (PW) in
     AbsInt.analyze ?fmt ()
 end
-

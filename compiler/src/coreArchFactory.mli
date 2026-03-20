@@ -16,6 +16,15 @@ module Core_arch_RISCV : Arch_full.Core_arch
    and type asm_op = Riscv_instr_decl.riscv_op
    and type extra_op = Riscv_extra.riscv_extra_op
 
+module Core_arch_WASM : Arch_full.Core_arch_wasm
+  with type reg = Wasm_decl.register
+   and type regx = Arch_utils.empty
+   and type xreg = Arch_utils.empty
+   and type rflag = Arch_utils.empty
+   and type cond = Wasm_decl.condt
+   and type asm_op = Wasm_instr_decl.wasm_op
+   and type extra_op = Wasm_extra.wasm_extra_op
+
 open X86_decl
 
 val core_arch_x86 :

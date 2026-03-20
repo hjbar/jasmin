@@ -13,7 +13,7 @@ let check_safety = ref false
 let safety_param = ref None
 let safety_config = ref None
 let stop_after = ref None
-let safety_makeconfigdoc = ref None   
+let safety_makeconfigdoc = ref None
 let trust_aligned = ref false
 
 let help_version = ref false
@@ -75,7 +75,8 @@ let set_target_arch a =
     match a with
     | "x86-64" -> X86_64
     | "arm-m4" -> ARM_M4
-    | "riscv" -> RISCV
+    | "riscv"  -> RISCV
+    | "wasm"   -> WASM
     | _ -> assert false
   in target_arch := a'
 
@@ -87,7 +88,7 @@ let set_syntax style () = assembly_style := style
 let set_printing p () =
   print_list := p :: !print_list
 
-let set_stop_after p () = 
+let set_stop_after p () =
   stop_after := Some p
 
 let set_all_print () =
@@ -132,8 +133,8 @@ type call_conv = Linux | Windows
 
 let call_conv = ref Linux (* Default value is chosen on start-up in `main_compiler` *)
 
-let set_cc cc = 
-  let cc = 
+let set_cc cc =
+  let cc =
     match cc with
     | "windows" -> Windows
     | "linux" -> Linux
@@ -186,7 +187,7 @@ let print_option p =
   let s, msg = print_strings p in
   ("-p"^s, Arg.Unit (set_printing p), " Print program after "^msg)
 
-let stop_after_option p = 
+let stop_after_option p =
   let s, msg = print_strings p in
   ("-until_"^s, Arg.Unit (set_stop_after p), " Stop after "^msg)
 
@@ -232,10 +233,10 @@ let options = [
     "-lazy-regalloc", Arg.Set lazy_regalloc, " Allocate variables to registers in program order";
     "-pall"    , Arg.Unit set_all_print, " Print program after each compilation steps";
     "-print-dependencies", Arg.Set print_dependencies, " Print dependencies and exit";
-    "-intel", Arg.Unit (set_syntax `Intel), " Use intel syntax (default is AT&T)"; 
-    "-ATT", Arg.Unit (set_syntax `ATT), " Use AT&T syntax (default is AT&T)"; 
+    "-intel", Arg.Unit (set_syntax `Intel), " Use intel syntax (default is AT&T)";
+    "-ATT", Arg.Unit (set_syntax `ATT), " Use AT&T syntax (default is AT&T)";
     "-call-conv", Arg.Symbol (["windows"; "linux"], set_cc), " Select calling convention (default depends on host architecture)";
-    "-arch", Arg.Symbol (["x86-64"; "arm-m4"; "riscv"], set_target_arch), " Select target arch (default is x86-64)";
+    "-arch", Arg.Symbol (["x86-64"; "arm-m4"; "riscv"; "wasm"], set_target_arch), " Select target arch (default is x86-64)";
     "-system", Arg.Symbol (["macosx"; "linux"], set_target_system), " Select target system (default is "^ Config.target_system^")";
     "-stack-zero",
       Arg.Symbol (List.map fst stack_zero_strategies, set_stack_zero_strategy),

@@ -187,7 +187,7 @@ Record compiler_params
   print_linear     : compiler_step -> lprog -> lprog;
   refresh_instr_info: funname -> _ufundef -> _ufundef;
   warning          : instr_info -> warning_msg -> instr_info;
-  lowering_opt     : lowering_options;
+  (* lowering_opt     : lowering_options; *)
   insert_renaming  : fun_info -> bool;
   fresh_id         : glob_decls -> var -> Ident.ident;
   fresh_var_ident  : v_kind -> instr_info -> int -> string -> atype -> Ident.ident;

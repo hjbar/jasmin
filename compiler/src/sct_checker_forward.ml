@@ -715,6 +715,7 @@ let expr_equal a b =
     | X86_64 -> X86_decl.x86_fcp
     | ARM_M4 -> Arm_decl.arm_fcp
     | RISCV  -> Riscv_decl.riscv_fcp
+    | WASM   -> Wasm_decl.wasm_fcp
   in
   let normalize e =
     e |> Conv.cexpr_of_expr |> Constant_prop.(const_prop_e fcp None empty_cpm) in

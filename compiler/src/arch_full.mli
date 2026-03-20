@@ -12,7 +12,7 @@ type 'a callstyle =
          + true means that the register is also used for the return
          + false means that there is no constraint (stack is also ok) *)
 
-(* x86    : StackDirect 
+(* x86    : StackDirect
    arm v7 : ByReg (Some ra)
    riscV  : ByReg (can it be StackDirect too ?)
 *)
@@ -34,6 +34,33 @@ module type Core_arch = sig
 
   val lowering_opt : lowering_options
   val not_saved_stack : var list
+
+  val pp_asm : Format.formatter -> (reg, regx, xreg, rflag, cond, asm_op) Arch_decl.asm_prog -> unit
+
+  val callstyle : reg callstyle
+
+  val known_implicits : (Name.t * string) list
+
+  val is_ct_asm_op : asm_op -> bool
+  val is_doit_asm_op : asm_op -> bool
+  val is_ct_asm_extra : extra_op -> bool
+  val is_doit_asm_extra : extra_op -> bool
+
+end
+
+module type Core_arch_wasm = sig
+  type reg
+  type regx
+  type xreg
+  type rflag
+  type cond
+  type asm_op
+  type extra_op
+
+  val asm_e : (reg, regx, xreg, rflag, cond, asm_op, extra_op) asm_extra
+  val aparams : (reg, regx, xreg, rflag, cond, asm_op, extra_op) Arch_params.architecture_params_wasm
+  val call_conv : (reg, regx, xreg, rflag, cond) calling_convention
+  val alloc_stack_need_extra : Z.t -> bool
 
   val pp_asm : Format.formatter -> (reg, regx, xreg, rflag, cond, asm_op) Arch_decl.asm_prog -> unit
 
@@ -85,7 +112,52 @@ module type Arch = sig
   val is_ct_sopn : ?doit:bool -> extended_op -> bool
 end
 
+module type Arch_wasm = sig
+  include Core_arch_wasm
+
+  type extended_op = (reg, regx, xreg, rflag, cond, asm_op, extra_op) Arch_extra.extended_op
+
+  val reg_size : Wsize.wsize
+  val pointer_data : Wsize.wsize
+  val msf_size : Wsize.wsize
+  val rip : var
+
+  val asmOp      : extended_op Sopn.asmOp
+  val asmOp_sopn : extended_op Sopn.sopn Sopn.asmOp
+
+  val reg_vars  : var list
+  val regx_vars : var list
+  val xreg_vars : var list
+  val flag_vars : var list
+  val argument_vars : var list
+  val xmm_argument_vars : var list
+  val ret_vars : var list
+  val xmm_ret_vars : var list
+  val allocatable_vars : var list
+  val extra_allocatable_vars : var list
+  val xmm_allocatable_vars : var list
+  val callee_save_vars : var list
+  val rsp_var : var
+  val all_registers : var list
+  val syscall_kill : Sv.t
+
+  val callstyle : var callstyle
+
+  val arch_info : (reg, regx, xreg, rflag, cond, asm_op, extra_op) Pretyping.arch_info
+
+  val is_ct_sopn : ?doit:bool -> extended_op -> bool
+end
+
 module Arch_from_Core_arch (A : Core_arch) : Arch
+       with type reg = A.reg
+        and type regx =  A.regx
+        and type xreg = A.xreg
+        and type rflag = A.rflag
+        and type cond = A.cond
+        and type asm_op = A.asm_op
+        and type extra_op = A.extra_op
+
+module Arch_from_Core_arch_wasm (A : Core_arch_wasm) : Arch_wasm
        with type reg = A.reg
         and type regx =  A.regx
         and type xreg = A.xreg

@@ -3,8 +3,8 @@ module Set  : sig include module type of BatSet end
 module Map  : sig include module type of BatMap end
 module Hash : sig include module type of BatHashtbl end
 
-module Sint : Set.S with type elt = int 
-module Mint : Map.S with type key = int 
+module Sint : Set.S with type elt = int
+module Mint : Map.S with type key = int
 
 module Ss   : Set.S with type elt = string
 module Ms   : Map.S with type key = string
@@ -95,16 +95,17 @@ type 'a pp = Format.formatter -> 'a -> unit
 val pp_list : ('a, 'b, 'c, 'd, 'd, 'a) format6 -> 'e pp -> 'e list pp
 
 (* -------------------------------------------------------------------- *)
-val pp_paren : 'a pp -> 'a pp 
+val pp_paren : 'a pp -> 'a pp
 
 (* -------------------------------------------------------------------- *)
 val pp_string : string pp
- 
+
 (* -------------------------------------------------------------------- *)
 type architecture =
   | X86_64
   | ARM_M4
   | RISCV
+  | WASM
 val architecture_to_string : architecture -> string
 
 (* -------------------------------------------------------------------- *)
@@ -112,7 +113,7 @@ val set_target_system: string -> unit
 val is_target_system_macos : unit -> bool
 
 (* -------------------------------------------------------------------- *)
-type model = 
+type model =
   | ConstantTime
   | ConstantTimeGlobal
   | Normal
@@ -147,8 +148,8 @@ val hierror :
 val pp_now  : Format.formatter -> unit
 
 (* -------------------------------------------------------------------- *)
-type warning = 
-  | ExtraAssignment 
+type warning =
+  | ExtraAssignment
   | UseLea
   | IntroduceArrayCopy
   | InlinedCallToExport

@@ -10,6 +10,10 @@ module Core_arch_RISCV = Riscv_arch_full.Riscv (struct
   let call_conv = Riscv_decl.riscv_linux_call_conv
 end)
 
+module Core_arch_WASM = Wasm_arch_full.Wasm (struct
+  let call_conv = Wasm_decl.wasm_linux_call_conv
+end)
+
 let core_arch_x86 ~use_lea ~use_set0 call_conv :
     (module Arch_full.Core_arch
        with type reg = register
@@ -39,4 +43,5 @@ let get_arch_module arch call_conv : (module Arch_full.Arch) =
                                      ~use_set0:!Glob_options.set0 call_conv)
                       : Arch_full.Core_arch)
                   | ARM_M4 -> (module Core_arch_ARM : Arch_full.Core_arch)
-                  | RISCV -> (module Core_arch_RISCV : Arch_full.Core_arch))))
+                  | RISCV -> (module Core_arch_RISCV : Arch_full.Core_arch)
+                  | WASM -> failwith "TODO")))
