@@ -17,7 +17,7 @@ Require Import
 
 (* --------------------------------------------- *)
 Definition wasm_reg_size := U32.
-Definition wasm_xreg_size := U64. (* Unused *)
+Definition wasm_xreg_size := U64.
 
 (* -------------------------------------------------------------------- *)
 (* Registers. *)
