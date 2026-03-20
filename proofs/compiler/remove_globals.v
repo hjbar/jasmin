@@ -128,15 +128,15 @@ Section REMOVE.
   Section GD.
     Context (gd:glob_decls).
 
-    Definition get_var_ ii (env:venv) (xi:gvar) := 
+    Definition get_var_ ii (env:venv) (xi:gvar) :=
       if is_lvar xi then
-        let vi := xi.(gv) in 
+        let vi := xi.(gv) in
         let x := vi.(v_var) in
         if is_glob_var x then
           match Mvar.get env x with
           | Some g => ok (mk_gvar (VarI g vi.(v_info)))
           | None   => Error (rm_glob_error ii vi)
-          end 
+          end
         else ok xi
       else ok xi.
 
@@ -361,4 +361,3 @@ Section REMOVE.
     else Error (rm_glob_ierror "Two global declarations have the same name").
 
 End REMOVE.
-

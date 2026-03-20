@@ -124,7 +124,7 @@ Qed.
 (* TODO try to remove the usage of this lemma, use sem_fopn_args version instead *)
 Lemma sub_eval_instr {lp ls ii xname vi y z} {wy wz : word Uptr} :
   let: (xi, x) := mkv xname vi in
-  get_var true (lvm ls) (v_var y) = ok (Vword wy) -> 
+  get_var true (lvm ls) (v_var y) = ok (Vword wy) ->
   get_var true (lvm ls) (v_var z) = ok (Vword wz) ->
   let: li := li_of_fopn_args ii (RISCVFopn.sub xi y z) in
   let: wx' := Vword (wy - wz)in
@@ -140,7 +140,7 @@ Qed.
 Lemma subi_eval_instr {lp ls ii xname vi y imm wy} :
   let: (xi, x) := mkv xname vi in
   get_var true (lvm ls) (v_var y) = ok (Vword wy) ->
-  let: li := li_of_fopn_args ii (RISCVFopn.subi xi y imm) in 
+  let: li := li_of_fopn_args ii (RISCVFopn.subi xi y imm) in
   let: wx' := Vword (wy - wrepr reg_size imm)in
   let: vm' := (lvm ls).[x <- wx'] in
   eval_instr lp li ls = ok (next_vm_ls ls vm').
@@ -189,7 +189,7 @@ Lemma smart_addi_sem_fopn_args (xi:var_i) y imm s (w : wreg) :
   convertible xi.(vtype) (aword riscv_reg_size) ->
   let: lc := RISCVFopn.smart_addi xi y imm in
   is_arith_small imm \/ xi <> v_var y :> var ->
-  get_var true (evm s) (v_var y) >>= to_word Uptr = ok w -> 
+  get_var true (evm s) (v_var y) >>= to_word Uptr = ok w ->
   exists vm',
     [/\ sem_fopns_args s lc = ok (with_vm s vm')
       , vm' =[\ Sv.singleton xi ] evm s
@@ -227,7 +227,7 @@ Qed.
 Lemma smart_addi_tmp_sem_fopn_args s (tmp : var_i) xname vi imm w :
   let: (xi, x) := mkv xname vi in
   let: lcmd := RISCVFopn.smart_addi_tmp xi tmp imm in
-  x <> v_var tmp -> 
+  x <> v_var tmp ->
   convertible (vtype tmp) (aword Uptr) ->
   get_var true (evm s) x >>= to_word Uptr = ok w ->
   exists vm',

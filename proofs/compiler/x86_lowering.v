@@ -13,16 +13,16 @@ Section Section.
 
 Context {atoI : arch_toIdent}.
 
-Definition is_regx_e (e:pexpr) := 
+Definition is_regx_e (e:pexpr) :=
   if e is Pvar x then is_regx x.(gv)
   else false.
 
-Definition is_regx_l (x:lval) := 
+Definition is_regx_l (x:lval) :=
   if x is Lvar x then is_regx x
   else false.
 
 Definition mov_ws ws x y tag :=
-  if (is_regx_e y || is_regx_l x) && (U32 ≤ ws)%CMP then 
+  if (is_regx_e y || is_regx_l x) && (U32 ≤ ws)%CMP then
     Copn [:: x] tag (Ox86 (MOVX ws)) [:: y]
   else
     Copn [:: x] tag (Ox86 (MOV ws)) [:: y].
@@ -460,7 +460,7 @@ Definition lower_cassgn (ii:instr_info) (x: lval) (tg: assgn_tag) (ty: atype) (e
           [:: MkI ii (Copn [:: f ; f ; f ; f ; f ; x] tg (Oasm (ExtOp (Oset0 szty))) [::]) ]
         else
           [:: MkI ii (Copn [:: x] tg (Oasm (ExtOp (Oset0 szty))) [::]) ]
-      else 
+      else
         [:: MkI ii (mov_ws szty x e tg)]
   | LowerCopn o e => copn o e
   | LowerInc o e => inc o e

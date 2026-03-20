@@ -70,12 +70,12 @@ Definition check_nop_opn (xs:lvals) (o: sopn) (es:pexprs) :=
   | _, _, _ => false
   end.
 
-Fixpoint keep_only {T:Type} (l:seq T) (tokeep : seq bool) {struct tokeep}:= 
+Fixpoint keep_only {T:Type} (l:seq T) (tokeep : seq bool) {struct tokeep}:=
   match tokeep, l with
-  | [::], _ => l 
+  | [::], _ => l
   | b::tokeep, [::] => [::]
-  | b::tokeep, x::l => 
-    let l := keep_only l tokeep in 
+  | b::tokeep, x::l =>
+    let l := keep_only l tokeep in
     if b then x::l else l
   end.
 
@@ -83,7 +83,7 @@ Section ONFUN.
 
 Context (do_nop: bool) (onfun: funname -> option (seq bool)).
 
-Definition fn_keep_only {T:Type} (fn:funname) (l:seq T) := 
+Definition fn_keep_only {T:Type} (fn:funname) (l:seq T) :=
   match onfun fn with
   | None => l
   | Some tokeep => keep_only l tokeep
@@ -112,7 +112,7 @@ Fixpoint dead_code_i (i:instr) (s:Sv.t) {struct i} : cexec (Sv.t * cmd) :=
   | Cassgn x tag ty e =>
     let w := write_i ir in
     if tag != AT_keep then
-      if (disjoint s w && negb (lv_write_mem x)) || 
+      if (disjoint s w && negb (lv_write_mem x)) ||
          ((do_nop || (tag == AT_rename)) && check_nop x e) then ok (s, [::])
       else ok (read_rv_rec (read_e_rec (Sv.diff s w) e) x, [:: i])
     else   ok (read_rv_rec (read_e_rec (Sv.diff s w) e) x, [::i])
@@ -156,7 +156,7 @@ Fixpoint dead_code_i (i:instr) (s:Sv.t) {struct i} : cexec (Sv.t * cmd) :=
     ok (s, [:: MkI ii (Cwhile a c e info c')])
 
   | Ccall xs fn es =>
-    Let sxs := 
+    Let sxs :=
       match onfun fn with
       | None => ok (read_rvs_rec (Sv.diff s (vrvs xs)) xs, xs)
       | Some bs => add_iinfo ii (check_keep_only xs bs s)

@@ -151,7 +151,7 @@ Section PROOF.
   Qed.
 
   Lemma mk_leaP s e l sz sz' (w: word sz') :
-    (sz <= Uptr)%CMP -> 
+    (sz <= Uptr)%CMP ->
     (sz ≤ sz')%CMP →
     mk_lea sz e = Some l ->
     sem_pexpr true gd s e = ok (Vword w) ->

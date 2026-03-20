@@ -265,7 +265,7 @@ Definition mem_write_rflag (s : asmmem) (f:rflag_t) (b:option bool) :=
      asm_scs  := s.(asm_scs);
      asm_reg  := s.(asm_reg);
      asm_regx := s.(asm_regx);
-     asm_rip  := s.(asm_rip); 
+     asm_rip  := s.(asm_rip);
      asm_xreg := s.(asm_xreg);
      asm_flag := RflagMap.set s.(asm_flag) f (o2rflagv b);
    |}.
@@ -277,7 +277,7 @@ Definition mem_write_mem al (l : pointer) sz (w : word sz) (s : asmmem) :=
      asm_scs  := s.(asm_scs);
      asm_reg  := s.(asm_reg);
      asm_regx := s.(asm_regx);
-     asm_rip  := s.(asm_rip); 
+     asm_rip  := s.(asm_rip);
      asm_xreg := s.(asm_xreg);
      asm_flag := s.(asm_flag);
   |}.
@@ -300,7 +300,7 @@ Definition mem_write_reg (f: msb_flag) (r: reg_t) sz (w: word sz) (m: asmmem) :=
     asm_scs  := m.(asm_scs);
     asm_reg  := RegMap.set m.(asm_reg) r (word_extend f (m.(asm_reg) r) w);
     asm_regx := m.(asm_regx);
-    asm_rip  := m.(asm_rip); 
+    asm_rip  := m.(asm_rip);
     asm_xreg := m.(asm_xreg);
     asm_flag := m.(asm_flag);
   |}.
@@ -312,7 +312,7 @@ Definition mem_write_regx (f: msb_flag) (r: regx_t) sz (w: word sz) (m: asmmem) 
     asm_scs  := m.(asm_scs);
     asm_reg  := m.(asm_reg);
     asm_regx := RegXMap.set m.(asm_regx) r (word_extend f (m.(asm_regx) r) w);
-    asm_rip  := m.(asm_rip); 
+    asm_rip  := m.(asm_rip);
     asm_xreg := m.(asm_xreg);
     asm_flag := m.(asm_flag);
   |}.
@@ -379,7 +379,7 @@ Definition mem_write_val (f:msb_flag) (args:asm_args) (aty: arg_desc * ltype) (v
   Let v := oof_val aty.2 v in
   mem_write_ty f s args aty.1 v.
 
-Definition mem_write_vals 
+Definition mem_write_vals
   (f:msb_flag) (s:asmmem) (args:asm_args) (a: seq arg_desc) (ty: seq ltype) (vs:values) :=
   fold2 ErrType (mem_write_val f args) (zip a ty) vs s.
 
@@ -387,7 +387,7 @@ Definition exec_instr_op idesc args (s:asmmem) : exec asmmem :=
   Let vs := eval_instr_op idesc args s in
   mem_write_vals idesc.(id_msb_flag) s args idesc.(id_out) idesc.(id_tout) vs.
 
-Definition eval_op o args m := 
+Definition eval_op o args m :=
   exec_instr_op (instr_desc_op o) args m.
 
 (* -------------------------------------------------------------------- *)

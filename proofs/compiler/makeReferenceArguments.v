@@ -191,4 +191,3 @@ Definition makereference_prog : cexec uprog :=
   ok {| p_extra := p_extra p; p_globs := p_globs p; p_funcs := funcs |}.
 
 End Section.
-

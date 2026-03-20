@@ -100,7 +100,7 @@ type pvalue = | Bool        of bool
               | CompPass    of Compiler.compiler_step
               | InputRanges of input_range list
 
-type param = { 
+type param = {
   p     : pvalue;
   name  : string;
   desc  : Json.Basic.t;

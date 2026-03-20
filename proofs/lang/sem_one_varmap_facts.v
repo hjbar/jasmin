@@ -44,7 +44,7 @@ Lemma Hopn : sem_Ind_opn p Pi_r.
 Proof. by move => ii s1 s2 tg op xs es; rewrite /sem_sopn; t_xrbindP => ???? /write_lvals_stack_stable. Qed.
 
 Lemma Hsyscall : sem_Ind_syscall p Pi_r.
-Proof. 
+Proof.
   move => ii s1 s2 o xs es scs m ves vs hes h; have {h} := exec_syscallS h; move=> [ho _] /write_lvals_stack_stable hw.
   by rewrite /Pi_r ho.
 Qed.

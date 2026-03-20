@@ -14,7 +14,7 @@ End EqType.
 Module Type UnionFind.
 
   Parameter S : eqType.
-  
+
   Parameter unionfind : Type.
 
   Parameter empty : unionfind.
@@ -188,7 +188,7 @@ Module NaiveUnionFind(E : EqType) <: UnionFind.
     move => /hasP [[? ?]] Hpinuf /andP [/=] /eqP ? /eqP ?; subst.
     by apply/hasP; rewrite /is_labeled; eexists; eauto.
   Qed.
-  
+
   Lemma find_r_empty l : find_r empty_r l = l.
   Proof. by []. Qed.
 

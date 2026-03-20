@@ -2,7 +2,7 @@ open Jasmin
 open Prog
 open Apron
 open Wsize
-    
+
 open SafetyVar
 open SafetyUtils
 
@@ -87,7 +87,7 @@ end = struct
 
     | _ -> Mvar v0
 
-  let unop op1 a = Munop (op1, a, Texpr1.Int, round_typ) 
+  let unop op1 a = Munop (op1, a, Texpr1.Int, round_typ)
 
   let binop op2 a b = Mbinop (op2, a, b, Texpr1.Int, round_typ)
 
@@ -186,10 +186,10 @@ end = struct
   let rec equal_mexpr_aux t t' = match t, t' with
     | Mvar v, Mvar v' -> v = v'
     | Mcst c, Mcst c' -> Coeff.equal c c'
-    | Munop (op, e, typ, rnd), Munop (op', e', typ', rnd') 
+    | Munop (op, e, typ, rnd), Munop (op', e', typ', rnd')
       -> op = op' && typ = typ' && rnd = rnd' && equal_mexpr_aux e e'
-    | Mbinop (op, e1, e2, typ, rnd), Mbinop (op', e1', e2', typ', rnd') 
-      -> op = op' && typ = typ' && rnd = rnd' 
+    | Mbinop (op, e1, e2, typ, rnd), Mbinop (op', e1', e2', typ', rnd')
+      -> op = op' && typ = typ' && rnd = rnd'
          && equal_mexpr_aux e1 e1'
          && equal_mexpr_aux e2 e2'
     | _ -> false

@@ -70,13 +70,13 @@ Definition sz_loop : lcmd :=
   let dec_off :=
     let '(r, op, e):=
       RISCVFopn.subi voff voff (wsize_size ws)
-    in 
+    in
     Lopn r op e
   in
   let compute_address :=
   let '(r, op, e):=
       RISCVFopn.add vtemp vrsp voff
-    in  
+    in
     Lopn r op e
   in
   let irs :=
@@ -147,6 +147,6 @@ Definition stack_zeroization_cmd
     Error err_sct
   | SZSunrolled =>
     ok (stack_zero_unrolled rsp ws_align ws stk_max, stack_zero_unrolled_vars)
-  end. 
+  end.
 
 End STACK_ZEROIZATION.

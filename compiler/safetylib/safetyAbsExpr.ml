@@ -1302,4 +1302,3 @@ module AbsExpr (Arch : SafetyArch.SafetyArch) (AbsDom : AbsNumBoolType) = struct
     AbsDom.forget_list abs mlvs_forget
 
 end
-

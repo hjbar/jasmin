@@ -5,16 +5,16 @@ open Wsize
 open Utils
 
 type v_scope = Expr.v_scope
-                 
+
 open SafetyUtils
-    
+
 (* Memory locations *)
 type mem_loc = MemLoc of var
 
-(* (v,ws,i) is the slice [8*i; 8*i + ws[ of v. 
+(* (v,ws,i) is the slice [8*i; 8*i + ws[ of v.
      Note that the slice offset is not scaled on the word-size. *)
 type slice = var * wsize * int
-             
+
 type atype =
   | Avar of var                     (* Variable *)
   | Aarray of var                   (* Array *)
@@ -32,7 +32,7 @@ type mvar =
 
 (*---------------------------------------------------------------*)
 (* Must the variable [v] be handled as a weak variable. *)
-let weak_update v = 
+let weak_update v =
   let weak_update_kind = function
     | Const -> assert false     (* should not happen *)
     | Stack _
@@ -51,7 +51,7 @@ let weak_update v =
     end
 
   | MinLocal gv
-  | MvarOffset gv ->  weak_update_kind gv.v_kind 
+  | MvarOffset gv ->  weak_update_kind gv.v_kind
 
   | MmemRange _ -> true
   | WTemp _ -> true
@@ -101,7 +101,7 @@ let mvar_ignore = function
   | Mlocal (AarraySlice _) -> Config.sc_arr_no_print ()
   | Mglobal _ -> Config.sc_glob_no_print ()
   | _ -> false
-    
+
 (*---------------------------------------------------------------*)
 let arr_range (v : var) : int = match v.v_ty with
   | Arr (_,i) -> i
@@ -131,13 +131,13 @@ let of_scope scope at = match scope with
   | Expr.Sglob  -> Mglobal at
 
 (* Ignore the [MinLocal _] case. *)
-let get_scope = function  
+let get_scope = function
   | Mlocal  _ ->  Expr.Slocal
   | Mglobal _ -> Expr.Sglob
   | _ -> assert false
 
 (* Ignore the [MinLocal _] case. *)
-let get_at = function  
+let get_at = function
   | Mlocal at | Mglobal at -> at
   | _ -> assert false
 
@@ -145,7 +145,7 @@ let get_at = function
 (* We log the result to be able to inverse it. *)
 let log_var = Hashtbl.create 16
 let reset () = Hashtbl.reset log_var
-    
+
 let avar_of_mvar a =
   let s = string_of_mvar a in
   if not(Hashtbl.mem log_var s) then
@@ -282,24 +282,24 @@ module Bvar : sig
 end = struct
   type t = mvar * bool          (* the boolean is true if t is positive. *)
 
-  let compare (bv,b) (bv',b') = 
+  let compare (bv,b) (bv',b') =
     match Stdlib.compare b b' with
     | 0 -> Stdlib.compare (avar_of_mvar bv) (avar_of_mvar bv')
     | _ as r -> r
 
-  let equal (bv,b) (bv',b') = 
+  let equal (bv,b) (bv',b') =
     avar_of_mvar bv = avar_of_mvar bv' && b = b'
 
   let make bv b = (bv,b)
 
   let is_neg (_,b) = not b
-      
-  let not (bv,b) = (bv,not b)                  
-    
+
+  let not (bv,b) = (bv,not b)
+
   let positive (bv,_) = (bv,true)
 
   let get_mv (bv,_) = bv
-                  
+
   let var_name (bv,_) = Var.to_string (avar_of_mvar bv)
 
   let print fmt (bv,b) =
@@ -309,5 +309,3 @@ end = struct
 end
 
 module Mbv = Map.Make(Bvar)
-
-

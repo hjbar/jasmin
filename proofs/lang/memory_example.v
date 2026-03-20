@@ -126,7 +126,7 @@ Module MemoryI : MemoryT.
   Definition is_init (m:mem) (p:pointer) :=
     is_zalloc m.(data) (wunsigned p).
 
-  Definition get (m:mem) (p:pointer) := 
+  Definition get (m:mem) (p:pointer) :=
     Let _ := assert (is_alloc m p && is_init m p) ErrAddrInvalid in
     ok (odflt 0%w (Mz.get m.(data) (wunsigned p))).
 
@@ -814,7 +814,7 @@ Module MemoryI : MemoryT.
     read m Aligned p U8 = read (free_stack m) Aligned p U8.
   Proof.
     move => /[dup] hv'; rewrite (fss_valid m) => /andP[] hv hp.
-    by move: hv' hv; rewrite -!valid8_validw -!get_read8 /memory_model.get /= /get => -> ->.  
+    by move: hv' hv; rewrite -!valid8_validw -!get_read8 /memory_model.get /= /get => -> ->.
   Qed.
 
   Lemma free_stackP m :

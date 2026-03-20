@@ -5,7 +5,7 @@ open Apron
 open SafetyUtils
 open SafetyVar
 open SafetyExpr
-    
+
 (******************)
 (* Tcons1 Wrapper *)
 (******************)
@@ -48,8 +48,8 @@ end = struct
     Mtexpr.equal_mexpr t.expr t'.expr
     && t.typ = t'.typ
 
-  let print ppf t = 
-    Format.fprintf ppf "%a %s 0" 
+  let print ppf t =
+    Format.fprintf ppf "%a %s 0"
       Mtexpr.print t.expr
       (Lincons1.string_of_typ t.typ)
 end
@@ -86,7 +86,7 @@ let rec equal_btcons bt bt' = match bt, bt' with
   | BLeaf t, BLeaf t' -> Mtcons.equal_tcons t t'
   | BVar bv, BVar bv' -> bv = bv'
   | _ -> false
-  
+
 let true_tcons1 =
   let zero_t = Coeff.s_of_int 0 in
   Mtcons.make (Mtexpr.cst zero_t) Tcons1.EQ

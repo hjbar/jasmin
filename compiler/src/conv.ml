@@ -88,13 +88,13 @@ let rec cexpr_of_expr = function
   | Parr_init (ws, n) -> C.Parr_init (ws, pos_of_int n)
   | Pvar x            -> C.Pvar (cgvari_of_gvari x)
   | Pget (al, aa,ws, x,e) -> C.Pget (al, aa, ws, cgvari_of_gvari x, cexpr_of_expr e)
-  | Psub (aa,ws,len, x,e) -> 
+  | Psub (aa,ws,len, x,e) ->
     C.Psub (aa, ws, pos_of_int len, cgvari_of_gvari x, cexpr_of_expr e)
   | Pload (al, ws, e)  -> C.Pload(al, ws, cexpr_of_expr e)
   | Papp1 (o, e)      -> C.Papp1(o, cexpr_of_expr e)
   | Papp2 (o, e1, e2) -> C.Papp2(o, cexpr_of_expr e1, cexpr_of_expr e2)
   | PappN (o, es) -> C.PappN (o, List.map (cexpr_of_expr) es)
-  | Pif   (ty, e, e1, e2) -> C.Pif(cty_of_ty ty, 
+  | Pif   (ty, e, e1, e2) -> C.Pif(cty_of_ty ty,
                                 cexpr_of_expr e,
                                 cexpr_of_expr e1,
                                 cexpr_of_expr e2)
@@ -122,7 +122,7 @@ let clval_of_lval = function
   | Lvar x          -> C.Lvar  (cvari_of_vari x)
   | Lmem (al, ws, loc, e) -> C.Lmem (al, ws, loc, cexpr_of_expr e)
   | Laset(al, aa,ws,x,e)-> C.Laset (al, aa, ws, cvari_of_vari x, cexpr_of_expr e)
-  | Lasub(aa,ws,len,x,e)-> 
+  | Lasub(aa,ws,len,x,e)->
     C.Lasub (aa, ws, pos_of_int len, cvari_of_vari x, cexpr_of_expr e)
 
 let lval_of_clval = function
@@ -130,7 +130,7 @@ let lval_of_clval = function
   | C.Lvar x        -> Lvar (vari_of_cvari x)
   | C.Lmem(al,ws,loc,e)  -> Lmem (al, ws, loc, expr_of_cexpr e)
   | C.Laset(al, aa,ws,x,e) -> Laset (al, aa,ws, vari_of_cvari x, expr_of_cexpr e)
-  | C.Lasub(aa,ws,len,x,e) -> 
+  | C.Lasub(aa,ws,len,x,e) ->
     Lasub (aa,ws, int_of_pos len, vari_of_cvari x, expr_of_cexpr e)
 
 (* ------------------------------------------------------------------------ *)
@@ -318,9 +318,9 @@ let prog_of_csprog p =
 
 
 (* ---------------------------------------------------------------------------- *)
-let to_array ty p t = 
+let to_array ty p t =
   let ws, n = array_kind ty in
-  let get i = 
+  let get i =
     match Warray_.WArray.get p Aligned Warray_.AAscale ws t (cz_of_int i) with
     | Utils0.Ok w -> z_of_word ws w
     | _    -> assert false in

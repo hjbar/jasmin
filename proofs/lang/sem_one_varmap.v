@@ -260,8 +260,8 @@ Lemma sem_iE ii k s i s' :
     k = vrv x ∧
     exists2 v', sem_pexpr true gd s e >>= truncate_val (eval_atype ty) = ok v' & write_lval true gd x v' s = ok s'
   | Copn xs t o es => k = vrvs xs ∧ sem_sopn gd o s xs es = ok s'
-  | Csyscall xs o es => 
-    k = Sv.union syscall_kill (vrvs (to_lvals (syscall_sig o).(scs_vout))) /\  
+  | Csyscall xs o es =>
+    k = Sv.union syscall_kill (vrvs (to_lvals (syscall_sig o).(scs_vout))) /\
     ∃ scs m ves vs,
      [/\ get_vars true s.(evm) (syscall_sig o).(scs_vin) = ok ves,
          exec_syscall (semCallParams:= sCP_stack) s.(escs) s.(emem) o ves = ok (scs, m, vs) &

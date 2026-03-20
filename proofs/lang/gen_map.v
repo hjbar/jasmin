@@ -126,8 +126,8 @@ Module Type MAP.
   Parameter all : forall {T},
     (K.t -> T -> bool) ->
     t T -> bool.
-  
-  Parameter has : 
+
+  Parameter has :
     forall {T},
       (K.t -> T -> bool) ->
       t T -> bool.
@@ -143,7 +143,7 @@ Module Type MAP.
 
   Parameter get0 : forall {T} x, (empty T).[x] = None.
 
-  Parameter is_emptyP : forall {T} (m: t T), 
+  Parameter is_emptyP : forall {T} (m: t T),
     reflect (forall x, m.[x] = None) (is_empty m).
 
   Parameter setP : forall {T} (m: t T) x y (v:T),
@@ -192,7 +192,7 @@ Module Type MAP.
      (forall k,
        match get m1 k, get m2 k with
        | None, _          => true
-       | Some t1, None     => f1 k t1 
+       | Some t1, None     => f1 k t1
        | Some t1, Some t2 => f k t1 t2
        end).
 
@@ -229,7 +229,7 @@ Module Mmake (K':CmpType) <: MAP.
   Definition t (T:Type) := Map.t T.
 
   Definition empty T : t T := Map.empty T.
-  
+
   Definition is_empty  {T} (m:t T) := Map.is_empty m.
 
   Definition get {T} (m:t T) (k:K.t) := Map.find k m.
@@ -255,13 +255,13 @@ Module Mmake (K':CmpType) <: MAP.
   Section QUANT.
     Context (T1:Type) (T2:Type) (f: K.t -> T1 -> bool) (f2: K.t -> T1 -> T2 -> bool).
 
-    Fixpoint all_t (t:Map.Raw.tree T1) := 
+    Fixpoint all_t (t:Map.Raw.tree T1) :=
       match t with
       | Map.Raw.Leaf => true
       | Map.Raw.Node t1 k x t2 _ => f k x && all_t t1 && all_t t2
       end.
 
-    Fixpoint has_t (t:Map.Raw.tree T1) := 
+    Fixpoint has_t (t:Map.Raw.tree T1) :=
       match t with
       | Map.Raw.Leaf => false
       | Map.Raw.Node t1 k x t2 _ => f k x || has_t t1 || has_t t2
@@ -274,17 +274,17 @@ Module Mmake (K':CmpType) <: MAP.
         let '(Map.Raw.mktriple t21 ox2 t22) := Map.Raw.split k t2 in
         [&& match ox2 with
             | None => f k x1
-            | Some x2 => f2 k x1 x2 
+            | Some x2 => f2 k x1 x2
             end,
             incl_t t11 t21 & incl_t t12 t22]
       end.
 
     Definition all (m: t T1) := all_t (Map.this m).
     Definition has (m: t T1) := has_t (Map.this m).
-    
+
    End QUANT.
 
-  Definition incl_def (T1:Type) (T2:Type) (f: K.t -> T1 -> bool) (f2: K.t -> T1 -> T2 -> bool) m1 m2:= 
+  Definition incl_def (T1:Type) (T2:Type) (f: K.t -> T1 -> bool) (f2: K.t -> T1 -> T2 -> bool) m1 m2:=
     incl_t f f2 (Map.this m1) (Map.this m2).
 
   Definition incl T1 T2 := @incl_def T1 T2 (fun _ _ => false).
@@ -310,7 +310,7 @@ Module Mmake (K':CmpType) <: MAP.
    (@Map.Bst _ (raw_map2 f m1.(Map.this) m2.(Map.this))
        (raw_map2_bst f m1 m2)).
 
-  Lemma map_option_bst {T1 T2} (f:K.t -> T1 -> option T2) (m:t T1) : 
+  Lemma map_option_bst {T1 T2} (f:K.t -> T1 -> option T2) (m:t T1) :
     Map.Raw.bst (Map.Raw.map_option f (Map.this m)).
   Proof.
     apply: Map.Raw.Proofs.map_option_bst.
@@ -318,7 +318,7 @@ Module Mmake (K':CmpType) <: MAP.
     by apply Map.is_bst.
   Qed.
 
-  Definition filter_map {T1 T2} (f:K.t -> T1 -> option T2) (m:t T1) : t T2 := 
+  Definition filter_map {T1 T2} (f:K.t -> T1 -> option T2) (m:t T1) : t T2 :=
     @Map.Bst _ (Map.Raw.map_option f (Map.this m))
               (map_option_bst f m).
 
@@ -524,7 +524,7 @@ Module Mmake (K':CmpType) <: MAP.
       have := Map.Raw.Proofs.MX.elim_compare_gt (H7 k' (Map.Raw.Proofs.find_in _)).
       by rewrite h1 => -[] // ? ->.
     move => [k'] [t] [].
-    case: Ordered.compare => k'k; cycle 2. 
+    case: Ordered.compare => k'k; cycle 2.
     + by move=> hs hf; apply/orP; right; rewrite hR; eauto.
     + by move=> hs hf; apply/orP; left; apply/orP; right; rewrite hL; eauto.
     by rewrite (cmp_eq k'k) => -[<-] ->.
@@ -532,7 +532,7 @@ Module Mmake (K':CmpType) <: MAP.
 
   Lemma incl_defP {T1 T2} (f:K.t -> T1 -> bool) (f2:K.t -> T1 -> T2 -> bool) (m1: t T1) (m2: t T2) :
      incl_def f f2 m1 m2 <->
-     (forall k, 
+     (forall k,
        match get m1 k, get m2 k with
        | None, _          => true
        | Some t1, None     => f k t1

@@ -37,10 +37,10 @@ Definition immediate_correct (immediate : var_i → Z → instr_r) :=
 
 Definition swap_correct (swap : assgn_tag → var_i → var_i → var_i → var_i → instr_r) :=
   forall (P' : sprog) rip s ii tag (x y z w : var_i) (pz pw: pointer),
-    convertible (vtype x) spointer -> convertible (vtype y) spointer -> 
-    convertible (vtype z) spointer -> convertible (vtype w) spointer -> 
+    convertible (vtype x) spointer -> convertible (vtype y) spointer ->
+    convertible (vtype z) spointer -> convertible (vtype w) spointer ->
     (evm s).[z] = Vword pz ->
-    (evm s).[w] = Vword pw -> 
+    (evm s).[w] = Vword pw ->
     esem_i P' rip (MkI ii (swap tag x y z w)) s = ok
       (with_vm s ((evm s).[x <- Vword pw]).[y <- Vword pz]).
 

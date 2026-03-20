@@ -62,7 +62,7 @@ Module RISCVFopn.
     Definition smart_subi_tmp x tmp imm :=
       map to_opn (RISCVFopn_core.smart_subi_tmp x tmp imm).
   Definition opn_ext_args := (seq lexpr * riscv_extended_op * seq rexpr)%type.
- 
+
   End WITH_PARAMS.
 
 End RISCVFopn.

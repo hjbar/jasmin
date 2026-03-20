@@ -10,7 +10,7 @@ Module E.
 Definition pass_name := "allocation"%string.
 
 (* FIXME: are there internal errors? *)
-Definition gen_error (internal:bool) (ii:option instr_info) (msg:string) := 
+Definition gen_error (internal:bool) (ii:option instr_info) (msg:string) :=
   {| pel_msg      := pp_s msg
    ; pel_fn       := None
    ; pel_fi       := None
@@ -514,7 +514,7 @@ Section LOOP.
 
   Fixpoint loop (n:nat) (m:M.t) :=
     match n with
-    | O => Error E.loop_iterator 
+    | O => Error E.loop_iterator
     | S n =>
       Let m' := check_c m in
       if M.incl m m' then ok m
@@ -525,7 +525,7 @@ Section LOOP.
 
   Fixpoint loop2 (n:nat) (m:M.t) :=
     match n with
-    | O => Error E.loop_iterator 
+    | O => Error E.loop_iterator
     | S n =>
       Let m' := check_c2 m in
       if M.incl m m'.2 then ok m'.1
@@ -643,7 +643,7 @@ Definition check_fundef (ep1 ep2 : extra_prog_t) (f1 f2: funname * fundef) (_:Da
 
 Definition check_prog_error := alloc_error "check_fundef (fold2)".
 
-Definition check_prog ep1 p_funcs1 ep2 p_funcs2 := 
+Definition check_prog ep1 p_funcs1 ep2 p_funcs2 :=
   fold2 check_prog_error (check_fundef ep1 ep2) p_funcs1 p_funcs2 tt.
 
 End PROG.

@@ -3,7 +3,7 @@ open Prog
 open Apron
 open Wsize
 
-module Config = SafetyConfig  
+module Config = SafetyConfig
 
 
 (*-------------------------------------------------------------------------*)
@@ -16,13 +16,13 @@ let rec ty_expr = function
 let rec ty_lval = function
   | Lasub (_,ws,len,_,_) -> Arr (ws,len)
   | a -> ToEC.ty_lval a
-           
+
 (*---------------------------------------------------------------*)
 exception Aint_error of string
-               
+
 (*------------------------------------------------------------*)
 let last_time = ref 0.
-    
+
 let print_time a =
   let t = Sys.time () in
   let diff = t -. !last_time in
@@ -32,7 +32,7 @@ let print_time a =
 
 let debug_print_time = true
 
-let debug a = 
+let debug a =
   if !Glob_options.debug then
     if debug_print_time then print_time a else a ()
   else ()
@@ -91,7 +91,7 @@ let rec fold_left3 f accu l1 l2 l3 =
   | [], [], [] -> accu
   | a1::l1, a2::l2, a3::l3 -> fold_left3 f (f accu a1 a2 a3) l1 l2 l3
   | _ -> raise (Invalid_argument "fold_left3")
-    
+
 (*------------------------------------------------------------*)
 (* Analyzer parameters *)
 
@@ -115,9 +115,9 @@ let wsize_of_int = function
 
 (*------------------------------------------------------------*)
 let env_of_list l =
-  let vars = Array.of_list l 
+  let vars = Array.of_list l
   and empty_var_array = Array.make 0 (Var.of_string "") in
-  Environment.make vars empty_var_array 
+  Environment.make vars empty_var_array
 
 (*------------------------------------------------------------*)
 (* Mpq Utils *)
@@ -127,7 +127,7 @@ let mpq_pow n =
   let c_div = Mpq.of_int 1 in
   let mpq2 = Mpq.of_int 1 in
   Mpq.mul_2exp c_div mpq2 n;
-  Mpqf.of_mpq c_div 
+  Mpqf.of_mpq c_div
 
 (* Return 2^n - y *)
 let mpq_pow_minus n y =
@@ -177,7 +177,7 @@ let coeff_add c c' = match Coeff.reduce c, Coeff.reduce c' with
 let interval_join i1 i2 =
   let inf1, inf2 = i1.Interval.inf, i2.Interval.inf in
   let inf = if Scalar.cmp inf1 inf2 < 0 then inf1 else inf2 in
-  
+
   let sup1, sup2 = i1.Interval.sup, i2.Interval.sup in
   let sup = if Scalar.cmp sup1 sup2 < 0 then sup2 else sup1 in
   Interval.of_infsup inf sup
@@ -185,7 +185,7 @@ let interval_join i1 i2 =
 let interval_meet i1 i2 =
   let inf1, inf2 = i1.Interval.inf, i2.Interval.inf in
   let inf = if Scalar.cmp inf1 inf2 < 0 then inf2 else inf1 in
-  
+
   let sup1, sup2 = i1.Interval.sup, i2.Interval.sup in
   let sup = if Scalar.cmp sup1 sup2 < 0 then sup1 else sup2 in
   Interval.of_infsup inf sup

@@ -593,4 +593,3 @@ Instance asmOp_sopn : asmOp sopn :=
     prim_string := sopn_prim_string }.
 
 End WITH_PARAMS.
-

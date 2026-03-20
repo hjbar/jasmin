@@ -58,4 +58,3 @@ Instance arm : asm register register_ext xregister rflag condt arm_op :=
   {
     eval_cond := fun _ => arm_eval_cond;
   }.
-

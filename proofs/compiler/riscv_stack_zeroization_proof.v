@@ -173,7 +173,7 @@ Proof.
 
   + apply: (eval_lsem1 hbody) => //.
     apply:  RISCVFopnP.mov_eval_instr => /=.
-    rewrite /eval_instr /= /get_var /= hrsp /=.    
+    rewrite /eval_instr /= /get_var /= hrsp /=.
     reflexivity.
 
   + rewrite /lnext_pc /=.
@@ -317,7 +317,7 @@ Proof.
     exact: hm'.
   case: hsr => hoff [hscs hmem hvalid hdisj hzero hvm hsaved hrsp hvzero haligned hbound].
   split=> /=.
-  + rewrite Vm.setP_neq /=; 
+  + rewrite Vm.setP_neq /=;
         last by apply /eqP => /(@inj_to_var _ _ _ _ _ _).
     rewrite Vm.setP_eq /=.
     rewrite wrepr_opp.
@@ -397,7 +397,7 @@ Proof.
     exists s3; split.
     + apply: (lsem_step_end hsem3).
       by rewrite /lsem1 /step (find_instr_skip hbody) /= /eval_instr /=
-         /get_var hsr3.(srl_off) /= /sem_sop2 /= !truncate_word_u /= 
+         /get_var hsr3.(srl_off) /= /sem_sop2 /= !truncate_word_u /=
          Z.sub_diag eqxx /= -(addn1 4) addnA addn1; reflexivity.
     by move: hsr3; rewrite Z.sub_diag.
   have hlt3: (0 < n - wsize_size ws)%Z by nia.

@@ -83,4 +83,3 @@ Notation "m .[ x ]" := (@Ms.get _ m x) : mstring_scope.
 Notation "m .[ x  <- v ]" := (@Ms.set _ m x v) : mstring_scope.
 Arguments Ms.get T%_type_scope m%_mstring_scope k.
 Arguments Ms.set T%_type_scope m%_mstring_scope k v.
-

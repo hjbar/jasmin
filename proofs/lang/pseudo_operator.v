@@ -13,8 +13,8 @@ Require Import
 
 (* Instructions that must be present in all the architectures. *)
 #[only(eqbOK)] derive
-Variant spill_op := 
-  | Spill 
+Variant spill_op :=
+  | Spill
   | Unspill.
 
 #[export]

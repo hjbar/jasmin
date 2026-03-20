@@ -115,7 +115,7 @@ Definition allocatable_stack (m : mem) (z : Z) :=
 (* -------------------------------------------------------------- *)
 Local Open Scope Z_scope.
 
-Definition fill_mem (m : mem) (p : pointer) (l : list u8) : exec mem := 
+Definition fill_mem (m : mem) (p : pointer) (l : list u8) : exec mem :=
   Let pm :=
    foldM (fun w pm =>
              Let m := write pm.2 Aligned (add p pm.1) w in
@@ -180,7 +180,7 @@ Proof.
   rewrite -!get_read8 (setP _ hw) orbC.
   case: ifP => /=.
   + rewrite !zify => h.
-    by have ->: Z.to_nat (sub k ptr - z1) = S (Z.to_nat (sub k ptr - (z1+1))) by lia. 
+    by have ->: Z.to_nat (sub k ptr - z1) = S (Z.to_nat (sub k ptr - (z1+1))) by lia.
   move=> _.
   case: eqP => [<- | hne].
   + have ->: sub (add ptr z1) ptr = z1.

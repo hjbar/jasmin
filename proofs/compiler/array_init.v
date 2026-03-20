@@ -20,13 +20,13 @@ Fixpoint remove_init_i i :=
   match i with
   | MkI ii ir =>
     match ir with
-    | Cassgn x _ _ e => 
-      if is_array_init e then 
-        let t := 
+    | Cassgn x _ _ e =>
+      if is_array_init e then
+        let t :=
           match x with
           | Lvar x => is_reg_array x
           | Lasub _ _ _ x _ => is_reg_array x
-          | _ => true 
+          | _ => true
           end in
         if t then [::] else [::i]
       else [::i]
@@ -66,10 +66,10 @@ Section Section.
 
   Context (add_init_i : Sv.t -> instr -> cmd * Sv.t).
 
-  Fixpoint add_init_c I (c:cmd) := 
+  Fixpoint add_init_c I (c:cmd) :=
     match c with
-    | [::] => ([::], I) 
-    | i::c => 
+    | [::] => ([::], I)
+    | i::c =>
       let (i,I) := add_init_i I i in
       let (c,I) := add_init_c I c in
       (i ++ c, I)
@@ -87,10 +87,10 @@ Definition add_init_aux ii x c :=
   | _ => c
   end.
 
-Definition add_init ii I extra i := 
+Definition add_init ii I extra i :=
   Sv.fold (add_init_aux ii) (Sv.diff extra I) [::i].
 
-Fixpoint add_init_i I (i:instr) := 
+Fixpoint add_init_i I (i:instr) :=
   let (ii,ir) := i in
   match ir with
   | Cif e c1 c2 =>

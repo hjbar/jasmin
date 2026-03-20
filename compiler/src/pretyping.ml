@@ -2423,4 +2423,3 @@ let tt_program arch_info (env : 'asm Env.env) (fname : string) =
      rendre au plus un argument (pas un tableau).
    - Verifier les kind dans les applications de fonctions
 *)
-

@@ -15,4 +15,3 @@ let init_tbl fc =
   let vars = Sv.diff fv arrs in
   Sv.iter init_var arrs;
   vars, tbl
-

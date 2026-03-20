@@ -187,7 +187,7 @@ Definition init_map fi (s:Sv.t) :=
     let n := vname x in
     let k :=
       match Ident.id_kind n with
-      | Reg (_, r) => 
+      | Reg (_, r) =>
           if Ident.spill_to_mmx n then Reg(Extra, r)
           else Stack r
       | _ => Stack Direct (* This is a dummy value, pretyping ensure this never appen *)
@@ -209,7 +209,7 @@ Definition check_map (m:Mvar.t var) X :=
   Mvar.fold (fun (x:var) (sx:var) bX =>
     (bX.1 && ~~Sv.mem sx bX.2, Sv.add sx bX.2)) m (true, X).
 
-Definition spill_fd (fn:funname) (fd: fundef) : cexec fundef :=  
+Definition spill_fd (fn:funname) (fd: fundef) : cexec fundef :=
   let s := foldl to_spill_i (Sv.empty, false) (f_body fd) in
   if ~~s.2 then ok fd else
   let: (m, _) := init_map (f_info fd) s.1 in
@@ -217,7 +217,7 @@ Definition spill_fd (fn:funname) (fd: fundef) : cexec fundef :=
   let b := check_map m X in
   Let _ := assert b.1 (pp_internal_error E.pass (pp_s "invalid map")) in
   Let ec := spill_c (spill_i (get_spill m)) Sv.empty (f_body fd) in
-  ok (with_body fd ec.2). 
+  ok (with_body fd ec.2).
 
 Definition spill_prog (p: prog) : cexec prog :=
   Let funcs := map_cfprog_name spill_fd (p_funcs p) in

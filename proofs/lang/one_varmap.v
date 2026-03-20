@@ -5,10 +5,10 @@ Require Import expr compiler_util.
 Import Utf8.
 From mathcomp Require Import ssreflect ssrfun ssrbool.
 
-Record ovm_syscall_sig_t := 
+Record ovm_syscall_sig_t :=
   { scs_vin : seq var; scs_vout : seq var }.
 
-Class one_varmap_info := { 
+Class one_varmap_info := {
   syscall_sig  : syscall_t -> ovm_syscall_sig_t;
   all_vars     : Sv.t;
   callee_saved : Sv.t;

@@ -89,4 +89,3 @@ Definition string_of_ew ew :=
   | W12_encoding => "W12"%string
   | W16_encoding => "W16"%string
   end.
-

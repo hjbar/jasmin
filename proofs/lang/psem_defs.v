@@ -225,4 +225,3 @@ Notation "'Let' ( n , t ) ':=' wdb ',' s '.[' v ']' 'in' body" :=
 
 Notation "'Let' ( n , t ) ':=' wdb ',' gd ',' s '.[' v ']' 'in' body" :=
   (@on_arr_var _ (get_gvar wdb gd s.(evm) v) (fun n (t:WArray.array n) => body)) (at level 25, gd at level 0, s at level 0).
-

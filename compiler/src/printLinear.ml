@@ -42,7 +42,7 @@ let pp_instr pd msfsize asmOp fmt i =
       (pp_opn pd msfsize asmOp) op
       (pp_list ",@ " pp_rexpr) es
   | Lsyscall o -> F.fprintf fmt "SysCall %s" (pp_syscall o)
-  | Lcall(lr, lbl) -> 
+  | Lcall(lr, lbl) ->
       let pp_o fmt o = match o with None -> () | Some v -> Format.fprintf fmt "%a " pp_var_i v in
       F.fprintf fmt "Call %a%a" pp_o lr pp_remote_label lbl
   | Lret       -> F.fprintf fmt "Return"

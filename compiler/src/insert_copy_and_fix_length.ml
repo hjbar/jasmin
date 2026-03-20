@@ -112,4 +112,3 @@ let iac_func pd f =
 
 let doit pd (p:(unit, 'asm) Prog.prog) : (unit, 'asm) Prog.prog =
   (fst p, List.map (iac_func pd) (snd p))
-

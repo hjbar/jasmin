@@ -339,7 +339,7 @@ Proof.
   - case : y heq hgety=> y yi /= *; subst y.
     rewrite -{1}(with_vm_same s); eexists; split; eauto.
   rewrite (mov_sem_fopn_args _ hgety) //=.
-  eexists; split; first reflexivity. 
+  eexists; split; first reflexivity.
   + by move=> z /Sv.singleton_spec hz; t_vm_get.
   by rewrite get_var_eq /= (convertible_eval_atype hc) //= truncate_word_u.
 Qed.
@@ -370,8 +370,8 @@ Lemma gen_smart_opi_sem_fopn_args
   convertible (vtype tmp) (aword Uptr) ->
   convertible xi.(vtype) (aword arm_reg_size) ->
   let: lc := ARMFopn_core.gen_smart_opi on_reg on_imm is_small neutral tmp xi y imm in
-  is_small imm \/ v_var tmp <> v_var y -> 
-  get_var true (evm s) (v_var y) >>= to_word Uptr = ok w -> 
+  is_small imm \/ v_var tmp <> v_var y ->
+  get_var true (evm s) (v_var y) >>= to_word Uptr = ok w ->
   exists vm',
     [/\ sem_fopns_args s lc = ok (with_vm s vm')
       , vm' =[\ Sv.add xi (Sv.singleton tmp) ] evm s
