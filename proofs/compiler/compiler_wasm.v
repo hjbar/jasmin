@@ -391,7 +391,7 @@ Definition check_wf_ptr entries (p:uprog) (ao: funname -> stk_alloc_oracle_t) : 
                 pp_s " and be returned first, in the same order, in the results."]))))
       end) entries.
 
-Definition compiler_front_end (entries: seq funname) (p: uprog) : cexec sprog :=
+Definition compiler_front_end (entries: seq funname) (p: uprog) : cexec _sprog :=
 
   Let pl := compiler_first_part entries p in
   (* stack + register allocation *)

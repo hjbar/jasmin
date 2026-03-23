@@ -11,8 +11,8 @@ module Wasm_core = struct
   type xreg = Arch_utils.empty
   type rflag =  Arch_utils.empty
   type cond = condt
-  type asm_op = Wasm_instr_decl.wasm_op
-  type extra_op = Wasm_extra.wasm_extra_op
+  type asm_op = Arch_utils.empty (* type asm_op = Wasm_instr_decl.wasm_op *)
+  type extra_op = Arch_utils.empty (* type extra_op = Wasm_extra.wasm_extra_op *)
 
   let atoI = X86_arch_full.atoI wasm_decl
 
@@ -44,8 +44,8 @@ module Wasm (Lowering_params : Wasm_input) : Arch_full.Core_arch_wasm
    and type xreg = Arch_utils.empty
    and type rflag = Arch_utils.empty
    and type cond = condt
-   and type asm_op = Wasm_instr_decl.wasm_op
-   and type extra_op = Wasm_extra.wasm_extra_op = struct
+   and type asm_op = Arch_utils.empty (* and type asm_op = Wasm_instr_decl.wasm_op *)
+   and type extra_op = Arch_utils.empty = struct (* and type extra_op = Wasm_extra.wasm_extra_op = struct *)
   include Wasm_core
   include Lowering_params
 

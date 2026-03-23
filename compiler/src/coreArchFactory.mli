@@ -22,8 +22,8 @@ module Core_arch_WASM : Arch_full.Core_arch_wasm
    and type xreg = Arch_utils.empty
    and type rflag = Arch_utils.empty
    and type cond = Wasm_decl.condt
-   and type asm_op = Wasm_instr_decl.wasm_op
-   and type extra_op = Wasm_extra.wasm_extra_op
+   and type asm_op = Arch_utils.empty (* and type asm_op = Wasm_instr_decl.wasm_op *)
+   and type extra_op = Arch_utils.empty (* and type extra_op = Wasm_extra.wasm_extra_op *)
 
 open X86_decl
 

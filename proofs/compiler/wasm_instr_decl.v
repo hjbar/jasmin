@@ -35,14 +35,21 @@ Definition pp_name name args :=
 (* -------------------------------------------------------------------- *)
 (* WASM 32I Base Integer instructions (operators). *)
 
+(*
 #[only(eqbOK)] derive
 Variant wasm_op : Type := .
+*)
+Notation wasm_op := empty.
 
+(*
 #[ export ]
 Instance eqTC_wasm_op : eqTypeC wasm_op :=
   { ceqP := wasm_op_eqb_OK }.
+*)
 
+(*
 Canonical wasm_op_eqType := @ceqT_eqType _ eqTC_wasm_op.
+*)
 
 
 (* -------------------------------------------------------------------- *)
@@ -59,8 +66,7 @@ Notation ty_rr := (sem_ltuple [:: lreg; lreg ]) (only parsing).
 (* Description of instructions. *)
 
 Definition wasm_instr_desc (mn : wasm_op) : instr_desc_t :=
-  match mn with
-  end.
+  of_empty instr_desc_t mn.
 
 Definition wasm_prim_string : seq (string * prim_constructor wasm_op) := [::].
 

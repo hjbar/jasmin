@@ -56,7 +56,7 @@ val fdef_of_csfdef : Var0.funname * 'asm Expr._sfundef -> (unit, 'asm) sfundef
 
 val prog_of_csprog : 'asm Expr._sprog -> (unit, 'asm) sprog
 
-val to_array : 
+val to_array :
   Prog.ty -> BinNums.positive -> Warray_.WArray.array -> wsize * Z.t array
 
 val error_of_cerror :

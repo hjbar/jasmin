@@ -11,6 +11,7 @@ Require Import
 Require Export
   arch_decl
   arch_extra
+  arch_utils
   wasm_params_core.
 Require Import
   wasm_decl
@@ -19,18 +20,22 @@ Require Import
 
 Local Notation E n := (sopn.ADExplicit n sopn.ACR_any).
 
+(*
 #[only(eqbOK)] derive
 Variant wasm_extra_op : Type := .
+*)
+Notation wasm_extra_op := empty.
 
-HB.instance Definition _ := hasDecEq.Build wasm_extra_op wasm_extra_op_eqb_OK.
+(* HB.instance Definition _ := hasDecEq.Build wasm_extra_op wasm_extra_op_eqb_OK. *)
 
+(*
 #[ export ]
 Instance eqTC_wasm_extra_op : eqTypeC wasm_extra_op :=
   { ceqP := wasm_extra_op_eqb_OK }.
+*)
 
 Definition get_instr_desc (o: wasm_extra_op) : instruction_desc :=
-  match o with
-  end.
+  of_empty instruction_desc o.
 
 (* Without priority 1, this instance is selected when looking for an [asmOp],
  * meaning that extra ops are the only possible ops. With that priority,

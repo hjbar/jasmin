@@ -206,7 +206,7 @@ let main () =
       | Utils0.Error e ->
         let e = Conv.error_of_cerror (Printer.pp_err ~debug:!debug) e in
         raise (HiError e)
-      | Utils0.Ok _asm -> ()
+      | Utils0.Ok asm -> Compile_wasm.compiler_back_end asm
         (*
         if !Glob_options.print_export_info_json then begin
           Format.printf "%a" (fun fmt ->

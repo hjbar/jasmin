@@ -60,16 +60,33 @@ val do_wint_int :
    prog
 
 val compile :
-(module Arch_full.Arch_wasm with type asm_op = 'asm_op and type cond = 'cond and type extra_op = 'extra_op and type reg = 'reg and type regx = 'regx and type rflag = 'rflag and type xreg = 'xreg) ->
-(debug:bool ->
- Compiler_wasm.compiler_step ->
- (unit,
+  (module Arch_full.Arch_wasm
+     with type reg = 'reg
+      and type regx = 'regx
+      and type xreg = 'xreg
+      and type rflag = 'rflag
+      and type cond = 'cond
+      and type asm_op = 'asm_op
+      and type extra_op = 'extra_op) ->
+  (debug:bool ->
+  Compiler_wasm.compiler_step ->
+  ( unit,
+    ( 'reg,
+      'regx,
+      'xreg,
+      'rflag,
+      'cond,
+      'asm_op,
+      'extra_op )
+    Arch_extra.extended_op
+    Sopn.asm_op_t )
+  prog ->
+  unit) ->
+  _ prog ->
+  ('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op
+  Expr._uprog ->
   ('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'extra_op)
-  Arch_extra.extended_op)
- prog -> unit) ->
-'a * ('b, 'c, 'd) gfunc list ->
-(('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'extra_op)
- Arch_extra.extended_op, unit, unit)
-Expr._prog ->
-('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'extra_op)
-Arch_extra.extended_op E.prog Compiler_util.cexec
+  Arch_extra.extended_op Expr._sprog Compiler_util.cexec
+
+val compiler_back_end :
+  ('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op Expr._sprog -> unit
