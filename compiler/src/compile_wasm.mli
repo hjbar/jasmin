@@ -89,4 +89,6 @@ val compile :
   Arch_extra.extended_op Expr._sprog Compiler_util.cexec
 
 val compiler_back_end :
-  ('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op Expr._sprog -> unit
+  (Wasm_decl.register, Arch_utils.empty, Arch_utils.empty, Arch_utils.empty,
+ Wasm_decl.condt, Arch_utils.empty, Arch_utils.empty)
+Arch_extra.extended_op Expr._sprog -> unit

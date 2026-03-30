@@ -1,0 +1,31 @@
+/* This function requires a mov instruction on x86 as the ABI requires distinct
+    registers for the argument (EDI) and the returned value (EAX) */
+export
+fn identity(reg u64 x) -> reg u64 {
+  return x;
+}
+
+/* This function requires a few move instructions, on all architectures */
+export
+fn swap(reg u64 x y) -> reg u64, reg u64 {
+  return y, x;
+}
+
+/* This function requires extra renamings on some architectures (x86, RISCV). */
+export
+fn mul(reg u64 x y) -> reg u64, reg u64 {
+  reg u64 hi lo;
+  hi, lo = x * 64u y;
+  return lo, hi;
+}
+
+export
+fn main_test(reg u64 x) -> reg u64 {
+  reg u64 y;
+  x = identity(x);
+  y = 2 * x;
+  x, y = swap(x, y);
+  x, y = mul(x, y);
+  x -= y;
+  return x;
+}

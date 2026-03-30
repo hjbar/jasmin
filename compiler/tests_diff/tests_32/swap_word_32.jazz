@@ -1,0 +1,12 @@
+export fn main_aux (reg u32 x y) -> reg u32 {
+  x, y = #swap(x, y);
+  x = x;
+  return x;
+}
+
+export fn main_test (reg u32 x) -> reg u32 {
+  reg u32 y;
+  y = 3 * x;
+  x = main_aux(x, y);
+  return x;
+}

@@ -1,0 +1,11 @@
+export fn test_string(reg u64 x) -> reg u64 {
+  global u8[10] g = "helo\nworld";
+  reg u64 y = g[:u64 0];
+  x += y;
+  return x;
+}
+
+export fn main_test(reg u64 x) -> reg u64 {
+  x = test_string(x);
+  return x;
+}

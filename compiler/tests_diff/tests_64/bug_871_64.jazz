@@ -1,0 +1,24 @@
+inline fn get(inline u64 i) -> reg u64 {
+  reg u64 r;
+  global u64 g;
+  g = i;
+  r = g;
+  return r;
+}
+
+export
+fn main_aux() -> reg u64 {
+  reg u64 a b;
+  a = get(0xa);
+  b = get(0xb);
+  b += a;
+  return b;
+}
+
+export
+fn main_test(reg u64 x) -> reg u64 {
+  reg u64 y;
+  y = main_aux();
+  x += y;
+  return x;
+}

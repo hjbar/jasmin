@@ -1,0 +1,71 @@
+export fn main_aux (reg u64 x y) -> reg u64 {
+  stack u64[2] t1 t2;
+  reg ptr u64[2] pt1 pt2;
+  pt1 = t1;
+  pt2 = t2;
+  pt1, pt2 = #swap(pt1, pt2);
+  reg u64 aux;
+  aux = 0;
+  pt1[0] = aux;
+  aux = 1;
+  pt1[1] = aux;
+  aux = 0;
+  pt2[0] = aux;
+  aux = 1;
+  pt2[1] = aux;
+  pt1, pt2 = #swap(pt1, pt2);
+
+  x,y = #swap(x,y);
+  aux = pt1[0];
+  x += aux;
+  aux = pt1[1];
+  x += aux;
+  aux = pt2[0];
+  x += aux;
+  aux = pt2[1];
+  x += aux;
+  t1 = pt1;
+  t2 = pt2;
+
+  aux = t1[0];
+  x += aux;
+  aux = t1[1];
+  x += aux;
+  aux = t2[0];
+  x += aux;
+  aux = t2[1];
+  x += aux;
+  x = x;
+  return x;
+}
+
+export fn truncate(reg u64 x) -> reg u64, reg u16 {
+  reg u16 y;
+  reg u64 t = x;
+  x = x;
+  x, y = #swap(x, t);
+  x = x;
+  return x, y;
+}
+
+export fn nolhs(reg u64 x y) {
+  #[keep] _, _ = #swap(x, y);
+}
+
+export fn wint(reg ui32 a) -> reg ui32 {
+  reg ui32 b = 0;
+  a, b = #swap(a, b);
+  a += b;
+  return a;
+}
+
+export fn main_test(reg u64 x) -> reg u64 {
+  reg u64 y;
+  reg u64 z;
+  reg u16 a;
+  y = 5 * x;
+  z = main_aux(x, y);
+  x, a = truncate(x);
+  nolhs(z, z);
+  return x;
+}

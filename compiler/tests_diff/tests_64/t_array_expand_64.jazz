@@ -1,0 +1,20 @@
+export
+fn foo () -> reg u64 {
+  reg    u64[5] x;
+  reg    u64    z;
+  x[0] = 0;
+  x[1] = 0;
+  x[2] = 0;
+  x[3] = 0;
+  x[4] = 0;
+  z = x[0];
+  return z;
+}
+
+export
+fn main_test (reg u64 x) -> reg u64 {
+  reg u64 y;
+  y = foo();
+  x += y;
+  return x;
+}

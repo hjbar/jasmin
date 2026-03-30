@@ -1,0 +1,11 @@
+u64 n = 1;
+
+export fn incr (reg u64 x) -> reg u64 {
+  x += n;
+  return x;
+}
+
+export fn main_test (reg u64 x) -> reg u64 {
+  x = incr(x);
+  return x;
+}

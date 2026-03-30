@@ -1,0 +1,16 @@
+export fn f(reg u64 a) {
+  if a < 0 {
+    reg u64 x = 0;
+    #spill(x);
+    #unspill(x);
+  } else {
+    reg u64 x = 0;
+    #spill(x);
+    #unspill(x);
+  }
+}
+
+export fn main_test(reg u64 a) -> reg u64 {
+  f(a);
+  return a;
+}

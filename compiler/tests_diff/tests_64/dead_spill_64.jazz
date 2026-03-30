@@ -1,0 +1,12 @@
+export
+fn main_aux(reg u64 x) {
+  #spill(x);
+}
+
+export fn main_test(reg u64 x) -> reg u64 {
+  reg u64 y;
+  y = 2 * x;
+  main_aux(y);
+  x *= y;
+  return x;
+}

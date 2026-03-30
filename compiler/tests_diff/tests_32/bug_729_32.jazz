@@ -1,0 +1,13 @@
+export fn id(reg u32 x) -> reg u32 { x = x; return x; }
+
+export
+fn whynot(reg u32 a) -> reg u32 {
+  a = id(a);
+  return a;
+}
+
+export
+fn main_test(reg u32 a) -> reg u32 {
+  a = whynot(a);
+  return a;
+}

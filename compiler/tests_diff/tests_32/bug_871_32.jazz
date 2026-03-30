@@ -1,0 +1,24 @@
+inline fn get(inline u32 i) -> reg u32 {
+  reg u32 r;
+  global u32 g;
+  g = i;
+  r = g;
+  return r;
+}
+
+export
+fn main_aux() -> reg u32 {
+  reg u32 a b;
+  a = get(0xa);
+  b = get(0xb);
+  b += a;
+  return b;
+}
+
+export
+fn main_test(reg u32 x) -> reg u32 {
+  reg u32 y;
+  y = main_aux();
+  x += y;
+  return x;
+}

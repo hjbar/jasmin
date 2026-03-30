@@ -1,0 +1,24 @@
+fn aux(reg ptr u64[2] out in) -> reg ptr u64[2] {
+  reg u64[2] x y;
+  x = #copy_64(in);
+  y[0], y[1] = x[0] * 64u x[1];
+  out = #copy_64(y);
+  return out;
+}
+
+export fn test(reg u64 t) -> reg u64 {
+  stack u64[2] a b;
+  inline int i;
+  for i = 0 to 2 { a[i] = t; }
+  b = aux(b, a);
+  reg u64 res;
+  res = 0;
+  for i = 0 to 2 { t = b[i]; res |= t; }
+  return res;
+}
+
+export
+fn main_test (reg u64 t) -> reg u64 {
+  t = test(t);
+  return t;
+}

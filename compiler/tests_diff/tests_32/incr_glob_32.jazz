@@ -1,0 +1,11 @@
+u32 n = 1;
+
+export fn incr (reg u32 x) -> reg u32 {
+  x += n;
+  return x;
+}
+
+export fn main_test (reg u32 x) -> reg u32 {
+  x = incr(x);
+  return x;
+}

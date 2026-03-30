@@ -1,0 +1,16 @@
+export fn aux(reg u64 x) -> reg u64 {
+  reg u64 y;
+  y = x;
+  return y;
+}
+
+export fn main_aux(reg u64 a) -> reg u64 {
+  #[inline]
+  a = aux(a);
+  return a;
+}
+
+export fn main_test(reg u64 a) -> reg u64 {
+  a = main_aux(a);
+  return a;
+}

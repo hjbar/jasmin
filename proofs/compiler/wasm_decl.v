@@ -23,7 +23,7 @@ Definition wasm_xreg_size := U64.
 (* Registers. *)
 
 #[only(eqbOK)] derive
-Variant register : Type := dummy_register.
+Variant register : Type := RSP.
 
 #[ export ]
 Instance eqTC_register : eqTypeC register :=
@@ -32,7 +32,7 @@ Instance eqTC_register : eqTypeC register :=
 Canonical wasm_register_eqType := @ceqT_eqType _ eqTC_register.
 
 Definition registers :=
-  [:: dummy_register].
+  [:: RSP].
 
 
 Lemma register_fin_axiom : Finite.axiom registers.
@@ -49,7 +49,7 @@ Canonical register_finType := @cfinT_finType _ finTC_register.
 
 Definition register_to_string (r : register) : string :=
   match r with
-  | dummy_register => "dummy_register"
+  | RSP => "RSP"
   end.
 
 #[ export ]
@@ -109,7 +109,7 @@ Instance wasm_decl : arch_decl register register_ext xregister rflag condt :=
   ; toS_x     := empty_toS lword64
   ; toS_f     := empty_toS lbool
   ; reg_size_neq_xreg_size := refl_equal
-  ; ad_rsp := dummy_register
+  ; ad_rsp := RSP
   ; ad_fcp := wasm_fcp
   ; check_CAimm := wasm_check_CAimm
   }.

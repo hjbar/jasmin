@@ -1,0 +1,33 @@
+export fn main_aux(reg u64 x, reg u64 y) -> reg u64
+{
+  reg u64 z;
+  stack u64[2] t;
+  reg ptr u64[2] p;
+  p = t;
+  z = 0;
+  p[0] = z;
+  z += 1;
+  p[1] = z;
+  #spill(p, y);
+  x = x + y;
+  #unspill(p, y);
+  z = p[0];
+  x += z;
+  z = p[1];
+  x += z;
+  x = x;
+  return x;
+}
+
+export fn wint() {
+  reg ui64 x = 0;
+  #spill(x);
+}
+
+export fn main_test(reg u64 x) -> reg u64 {
+  reg u64 y;
+  y = 4 * x;
+  wint();
+  x = main_aux(x, y);
+  return x;
+}

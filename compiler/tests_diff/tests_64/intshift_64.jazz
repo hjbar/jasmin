@@ -1,0 +1,13 @@
+export fn test_int_shift(reg u64 x) -> reg u64 {
+  inline int i;
+  x = x;
+  for i = 0 to 4 {
+    x += 1 << i;
+  }
+  return x;
+}
+
+export fn main_test(reg u64 x) -> reg u64 {
+  x = test_int_shift(x);
+  return x;
+}

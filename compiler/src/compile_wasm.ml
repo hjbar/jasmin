@@ -590,26 +590,6 @@ let glval2doc : int glval -> string = function
   | Lasub (_access, wsize, len, igvar, expr) ->
     Format.sprintf "Lasub(_, %s, %s, %s, %s)" (size2doc wsize) (int2doc len) (igvar2doc igvar) (expr2doc expr)
 
-let range2doc ((dir, e1, e2) : int grange) : string =
-  let dir_doc =
-    match dir with
-    | UpTo -> "UpTo"
-    | DownTo -> "DownTo"
-  in
-  Format.sprintf "((%s, %s), %s)" dir_doc (expr2doc e1) (expr2doc e2)
-
-let instr2doc ({ i_desc ; _ } : (int, 'info, 'asm) ginstr) : string =
-  match i_desc with
-  | Cassgn (glval, _tag, gtype, expr) ->
-    Format.sprintf "Cassgn(%s, _, %s, %s)" (glval2doc glval) (type2doc gtype) (expr2doc expr)
-  | Copn (_glvals, _tag, _sopn, _es) -> "Copn(_, _, _, _)"
-  | Csyscall (_glvals, _syscall, _es) -> "Csyscall(_, _, _)"
-  | Cassert (label, expr) -> Format.sprintf "Cassert(%s, %s)" label (expr2doc expr)
-  | Cif (expr, _then, _else) -> Format.sprintf "Cif(%s, _, _)" (expr2doc expr)
-  | Cfor (igvar, grange, _instrs) -> Format.sprintf "Cfor(%s, %s, _)" (igvar2doc igvar) (range2doc grange)
-  | Cwhile (_align, _do, cond, _info, _while) -> Format.sprintf "Cwhile(_, _, %s, _, _)" (expr2doc cond)
-  | Ccall (_glvals, funname, _es) -> Format.sprintf "Ccall(_, %s, _)" funname.fn_name
-
 (* -------------------------------------------------------------------- *)
 
 let int2string = string_of_int
@@ -808,6 +788,7 @@ let fresh_loop_name =
     incr cpt;
     Format.sprintf "#loop_%d" !cpt
 
+(* TODO : source map pour les infos *)
 let rec instr2string ({ i_desc ; _ } as instr : (int, 'info, 'asm) ginstr) : string =
   match i_desc with
   | Cassgn (Lnone _, _tag, _gtype, expr) ->
@@ -864,16 +845,18 @@ let rec instr2string ({ i_desc ; _ } as instr : (int, 'info, 'asm) ginstr) : str
       |> List.rev
       |> List.fold_left (Format.sprintf "%s@.%s") ""
     in
-
     Format.sprintf "%s@.%s" call sets
+  | Copn (_glvals, _tag, Opseudo_op Onop, _es) -> ""
+  | Copn ([Lvar x; Lvar y], _tag, Opseudo_op (Oswap (Coq_aword U32)), [e1; e2]) ->
+    Format.sprintf "%s@.%s@.(%s.set $%s)@.(%s.set $%s)" (expr2string e1) (expr2string e2) (igvar_kind2string x) (igvar_name x) (igvar_kind2string y) (igvar_name y)
   | Cassgn _
   | Copn _
   | Csyscall _
   | Cassert _
   | Cfor _ ->
-    instr
-    |> instr2doc
-    |> Format.sprintf "Don't know how to handle this instruction : %s"
+    let module Core = CoreArchFactory.Core_arch_WASM in
+    let module Arch = Arch_full.Arch_from_Core_arch_wasm (Core) in
+    Format.asprintf "Don't know how to handle this instruction : %a" (Printer.pp_instr ~debug:false U32 U32 Arch.asmOp) instr
     |> failwith
 
 and instrs2string (instrs : (int, 'info, 'asm) ginstr list) : string =
@@ -998,7 +981,7 @@ let pp_prog (funcs : ('info, 'asm) sfundef list) : unit =
 
   let printed_memory = Format.sprintf {|(import "env" "memory" (memory 1))|} in
 
-  Format.eprintf {|@.(module@.%s@.%s@.%s)@.|} printed_memory printed_globs printed_funcs (* FIXME: Verify this import for the memory *)
+  Format.printf {|@.(module@.%s@.%s@.%s)@.|} printed_memory printed_globs printed_funcs (* FIXME: Verify this import for the memory *)
 
 (* -------------------------------------------------------------------- *)
 

@@ -45,3 +45,9 @@ let get_arch_module arch call_conv : (module Arch_full.Arch) =
                   | ARM_M4 -> (module Core_arch_ARM : Arch_full.Core_arch)
                   | RISCV -> (module Core_arch_RISCV : Arch_full.Core_arch)
                   | WASM -> failwith "TODO")))
+
+let get_arch_module_wasm arch : (module Arch_full.Arch_wasm) =
+  (module Arch_full.Arch_from_Core_arch_wasm
+            ((val match arch with
+                  | WASM -> (module Core_arch_WASM : Arch_full.Core_arch_wasm)
+                  | _ -> failwith "TODO")))

@@ -1,0 +1,16 @@
+#[stacksize=16]
+export
+fn main_aux(reg u64 x) -> reg u64 {
+  stack u64[1] a b;
+  a[0] = x;
+  #[keep]
+  b[0] = x;
+  x = a[0];
+  return x;
+}
+
+export
+fn main_test(reg u64 x) -> reg u64 {
+  x = main_aux(x);
+  return x;
+}

@@ -1,0 +1,45 @@
+
+param int r = 0;
+u64 r = 0;
+
+
+export fn fok (reg u64 r) -> reg u64 {
+  reg u64 x;
+  x = r;
+  return x;
+}
+
+export fn f (reg u64 y) -> reg u64 {
+  reg u64 x;
+  x = y;
+  if (x == 0) {
+    reg u64 y;
+    y = x;
+    x = y;
+  }
+  return x;
+}
+
+
+export fn g (reg u64 z) -> reg u64 {
+  reg u64 x y;
+  x = z;
+  return x;
+}
+
+
+export fn main_test(reg u64 x) -> reg u64 {
+  reg u64 y;
+  reg u64 z;
+  reg u64 w;
+
+  y = fok(x);
+  z = f(x);
+  w = g(x);
+
+  x += y;
+  x *= z;
+  x -= w;
+
+  return x;
+}

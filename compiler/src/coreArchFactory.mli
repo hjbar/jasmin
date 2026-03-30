@@ -42,3 +42,6 @@ val core_arch_x86 :
 
 val get_arch_module :
   Utils.architecture -> Glob_options.call_conv -> (module Arch_full.Arch)
+
+val get_arch_module_wasm :
+  Utils.architecture -> (module Arch_full.Arch_wasm)

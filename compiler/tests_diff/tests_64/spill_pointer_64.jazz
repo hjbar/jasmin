@@ -1,0 +1,23 @@
+u64[1] C = {1};
+
+export
+fn main_aux() -> reg u64
+{
+  reg ptr u64[1] Cp;
+  stack ptr u64[1] Cps;
+  reg u64 c;
+
+  Cp = C;
+  Cps = Cp;
+  Cp = Cps;
+  c = Cp[0];
+  return c;
+}
+
+export
+fn main_test(reg u64 x) -> reg u64 {
+  reg u64 y;
+  y = main_aux();
+  x += y;
+  return x;
+}

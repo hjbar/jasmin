@@ -1,0 +1,18 @@
+u64 g = 540;
+
+export fn bug_540() -> reg u64 {
+  inline int i;
+  reg u64 r;
+  r = 0;
+  i = g;
+  r += i;
+  return r;
+}
+
+export
+fn main_test(reg u64 x) -> reg u64 {
+  reg u64 y;
+  y = bug_540();
+  x += y;
+  return x;
+}

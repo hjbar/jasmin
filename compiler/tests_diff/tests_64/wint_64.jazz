@@ -1,0 +1,32 @@
+export fn syntax() -> reg u64 {
+  reg ui64 a = 42; // immediate
+  reg si64 b = -5;
+  reg si64 c = -b; // negation
+  c *= c; // multiplication
+  reg u64 x = (64u)c; // safe conversion to machine-word
+  x |= (64u)a;
+  return x;
+}
+
+export fn conv(reg u64 x) -> reg u64 {
+  reg ui64 u = (64ui)x;
+  reg si64 s = (64si)x;
+  x = (64u)u;
+  x |= (64u)s;
+  return x;
+}
+
+export fn main_test(reg u64 x) -> reg u64 {
+  reg u64 a;
+  reg u64 b;
+  reg u64 c;
+
+  a = syntax();
+  b = conv(x);
+
+  x += a;
+  x += b;
+  x += c;
+
+  return x;
+}

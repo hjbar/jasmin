@@ -1,0 +1,13 @@
+export fn id(reg u64 x) -> reg u64 { x = x; return x; }
+
+export
+fn whynot(reg u64 a) -> reg u64 {
+  a = id(a);
+  return a;
+}
+
+export
+fn main_test(reg u64 a) -> reg u64 {
+  a = whynot(a);
+  return a;
+}

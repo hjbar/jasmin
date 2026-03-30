@@ -1,0 +1,39 @@
+param int A = 10;
+param int B = A / 3;
+
+u64 a = A;
+u64 b = B;
+
+u64 c = A * B;
+u64 d = a * b;
+u64 e = A >> 1;
+u64[2] t = {A, b};
+u64 f = t[0];
+u64 g = t[1];
+
+export fn f(reg u64 x) -> reg u64 {
+  reg u64 r;
+  r = x;
+  r += A;
+  r += B;
+  x = a;
+  r += x;
+  x = b;
+  r += x;
+  x = c;
+  r += x;
+  x = d;
+  r += x;
+  x = e;
+  r += x;
+  x = f;
+  r += x;
+  x = g;
+  r += x;
+  return r;
+}
+
+export fn main_test(reg u64 x) -> reg u64 {
+  x = f(x);
+  return x;
+}
