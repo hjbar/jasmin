@@ -314,10 +314,10 @@ Definition compiler_first_part (to_keep: seq funname) (p: uprog) : cexec uprog :
   Let pp := load_constants_prog (fresh_var_ident cparams (Reg (Normal, Direct))) aparams.(ap_plp_wasm) pg in
   let pp := cparams.(print_uprog) LoadConstantsInCond pp in
 
-  Let p := propagate_inline.pi_prog p in
-  let p := cparams.(print_uprog) PropagateInline p in
+  Let pq := propagate_inline.pi_prog pp in
+  let pq := cparams.(print_uprog) PropagateInline pq in
 
-  ok p.
+  ok pq.
 
 (*
 Definition compiler_third_part (returned_params: funname -> option (seq (option nat))) (ps: sprog) : cexec sprog :=
