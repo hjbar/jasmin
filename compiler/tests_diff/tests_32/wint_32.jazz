@@ -19,14 +19,12 @@ export fn conv(reg u32 x) -> reg u32 {
 export fn main_test(reg u32 x) -> reg u32 {
   reg u32 a;
   reg u32 b;
-  reg u32 c;
 
   a = syntax();
   b = conv(x);
 
   x += a;
   x += b;
-  x += c;
 
   return x;
 }

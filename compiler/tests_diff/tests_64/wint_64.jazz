@@ -19,14 +19,12 @@ export fn conv(reg u64 x) -> reg u64 {
 export fn main_test(reg u64 x) -> reg u64 {
   reg u64 a;
   reg u64 b;
-  reg u64 c;
 
   a = syntax();
   b = conv(x);
 
   x += a;
   x += b;
-  x += c;
 
   return x;
 }

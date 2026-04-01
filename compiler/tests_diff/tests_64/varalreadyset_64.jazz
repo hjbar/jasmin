@@ -14,11 +14,11 @@ export fn main_aux(reg u64 a) -> reg u64, reg u64 {
 export fn main_test(reg u64 a) -> reg u64 {
   reg u64 x;
   reg u64 y;
-  reg u64 z;
 
   x, y = main_aux(a);
 
-  z += x;
-  z -= y;
-  return z;
+  a += x;
+  a -= y;
+
+  return a;
 }

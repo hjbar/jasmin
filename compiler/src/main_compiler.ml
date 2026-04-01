@@ -206,24 +206,17 @@ let main () =
       | Utils0.Error e ->
         let e = Conv.error_of_cerror (Printer.pp_err ~debug:!debug) e in
         raise (HiError e)
-      | Utils0.Ok asm -> Compile_wasm.compiler_back_end asm
-        (*
-        if !Glob_options.print_export_info_json then begin
-          Format.printf "%a" (fun fmt ->
-            PrintExportInfo.pp_export_info_json
-              fmt
-              env
-              prog)
-              asm
-        end;
+      | Utils0.Ok asm ->
+        let prog = Compile_wasm.compiler_back_end asm in
+
         if !outfile <> "" then begin
           BatFile.with_file_out !outfile (fun out ->
             let fmt = BatFormat.formatter_of_out_channel out in
-            Format.fprintf fmt "%a%!" Arch.pp_asm asm);
-            if !debug then Format.eprintf "assembly listing written@."
-        end else if List.mem Compiler_wasm.Assembly (List.map Compile_utils.to_wasm_step !print_list) then
-            Format.printf "%a%!" Arch.pp_asm asm
-        *)
+            Format.fprintf fmt "%s%!" prog);
+          if !debug then Format.eprintf "assembly listing written@."
+        end
+        else if List.mem Compiler_wasm.Assembly (List.map Compile_utils.to_wasm_step !print_list) then
+          Format.printf "%s%!" prog
       end
     end
     else begin

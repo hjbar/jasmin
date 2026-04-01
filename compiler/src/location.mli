@@ -10,8 +10,8 @@ type t = {
   loc_echar : int;
 }
 
-type i_loc = private { 
-    uid_loc  : int; 
+type i_loc = private {
+    uid_loc  : int;
     base_loc : t;
     stack_loc: t list;
   }

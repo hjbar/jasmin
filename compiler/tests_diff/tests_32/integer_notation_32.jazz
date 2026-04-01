@@ -20,15 +20,15 @@ u32[11] y = {
 
 export fn main_test(reg u32 x) -> reg u32 {
   x += y[0];
-  x *= y[1];
-  x -= y[2];
-  x += y[3];
-  x /= y[4];
+  x -= y[1];
+  x *= y[2];
+  x = x /32s y[3];
+  x += y[4];
   x -= y[5];
-  x += y[6];
-  x *= y[7];
-  x /= y[8];
+  x *= y[6];
+  x = x /32s y[7];
+  x += y[8];
   x -= y[9];
-  x += y[10];
+  x *= y[10];
   return x;
 }
