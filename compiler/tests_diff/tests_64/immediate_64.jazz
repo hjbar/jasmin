@@ -1,0 +1,27 @@
+u8 a = 123;
+u8 b = -17;
+u8 c = 0xab;
+u8 d = 0Xcd;
+u8 e = -0XAA;
+
+export fn main_test(reg u64 x) -> reg u64 {
+  reg u64 tmp;
+  reg u64 x;
+
+  tmp = (64u)a;
+  x += tmp;
+
+  tmp = (64u)b;
+  x += tmp;
+
+  tmp = (64u)c;
+  x += tmp;
+
+  tmp = (64u)d;
+  x += tmp;
+
+  tmp = (64u)e;
+  x += tmp;
+
+  return x;
+}

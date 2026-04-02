@@ -601,7 +601,7 @@ let velem2string : Wsize.velem -> string = function
 let rec expr2string ~(funname : string) ~(loc : error_loc) (expr : 'len gexpr) : string =
   let expr2string = expr2string ~funname ~loc in
   let unop2string = unop2string ~funname ~loc in
-  let binop2string = binop2string ~funname ~loc expr in
+  let binop2string = binop2string ~funname ~loc ~expr in
   let expr2error = expr2error ~funname ~loc in
   let size2string = size2string ~funname ~loc in
   let type2string = type2string ~funname ~loc in
@@ -656,7 +656,7 @@ and unop2string ~(funname : string) ~(loc : error_loc) (op : Operators.sop1) (ex
     in
     Format.sprintf "(%s %s)" op (expr2string expr)
 
-and binop2string ~(funname : string) ~(loc : error_loc) (expr : 'len gexpr) (op : Operators.sop2) : string =
+and binop2string ~(funname : string) ~(loc : error_loc) ~(expr : 'len gexpr) (op : Operators.sop2) : string =
   let expr2error = expr2error ~funname ~loc in
   let size2string = size2string ~funname ~loc in
   let op_kind2string = op_kind2string ~funname ~loc in
@@ -720,6 +720,12 @@ and binop2string ~(funname : string) ~(loc : error_loc) (expr : 'len gexpr) (op 
   | Ovlsl _
   | Ovasr _ -> expr2error expr
 
+let exprs2string ?(break = true) ~(funname : string) ~(loc : error_loc) (es : 'len gexprs) : string =
+  es
+  |> List.map (expr2string ~funname ~loc)
+  |> List.map (Format.sprintf (if break then "%s@." else "%s "))
+  |> List.fold_left ( ^ ) ""
+
 (* -------------------------------------------------------------------- *)
 
 let fresh_block_name =
@@ -734,12 +740,30 @@ let fresh_loop_name =
     incr cpt;
     Format.sprintf "#loop_%d" !cpt
 
+let set_pushed_values ~(funname : string) ~(loc : error_loc) ~(instr : ('len, 'info, 'asm) ginstr) (glvals : 'len glvals) : string =
+  let instr2error = instr2error ~funname ~loc in
+  let expr2string = expr2string ~funname ~loc in
+
+  glvals
+  |> List.map (
+      fun (glval : 'len glval) ->
+         match glval with
+         | Lnone _ -> "(drop)"
+         | Lvar igvar -> Format.sprintf "(%s.set $%s)" (igvar_kind2string igvar) (igvar_name igvar)
+         | Lmem (_aligned, wsize, _info, addr) -> Format.sprintf "(%s.store %s)" (size2string wsize) (expr2string addr)
+         | _ -> instr2error instr
+     )
+  |> List.rev
+  |> List.fold_left (Format.sprintf "%s@.%s") ""
+
 let rec instr2string ~(funname : string) ({ i_desc ; i_loc ; _ } as instr : ('len, 'info, 'asm) ginstr) : string =
   let loc = Lmore i_loc in
   let instrs2string = instrs2string ~funname in
   let instr2error = instr2error ~funname ~loc in
   let expr2string = expr2string ~funname ~loc in
+  let exprs2string = exprs2string ~funname ~loc in
   let size2string = size2string ~funname ~loc in
+  let set_pushed_values = set_pushed_values ~funname ~loc ~instr in
 
   match i_desc with
   | Cassgn (Lnone _, _tag, _gtype, expr) ->
@@ -776,28 +800,13 @@ let rec instr2string ~(funname : string) ({ i_desc ; i_loc ; _ } as instr : ('le
     )" block_name loop_name do_instrs cond while_instrs loop_name block_name
   | Ccall (glvals, funname_call, args) ->
     let name = funname_call.fn_name in
-    let args = args |> List.map expr2string |> List.map (Format.sprintf "%s ") |> List.fold_left ( ^ ) "" in
+    let args = exprs2string ~break:false args in
     let call = Format.sprintf "(call $%s %s)" name args in
-
-    let sets =
-      glvals
-      |> List.map (
-          fun (glval : 'len glval) ->
-             match glval with
-             | Lnone _ -> "(drop)"
-             | Lvar igvar -> Format.sprintf "(%s.set $%s)" (igvar_kind2string igvar) (igvar_name igvar)
-             | Lmem (_aligned, wsize, _info, addr) -> Format.sprintf "(%s.store %s)" (size2string wsize) (expr2string addr)
-             | _ -> instr2error instr
-         )
-      |> List.rev
-      |> List.fold_left (Format.sprintf "%s@.%s") ""
-    in
+    let sets = set_pushed_values glvals in
     Format.sprintf "%s@.%s" call sets
   | Copn (_glvals, _tag, Opseudo_op Onop, _es) -> ""
-  | Copn ([Lvar x; Lvar y], _tag, Opseudo_op (Oswap _), [e1; e2]) ->
-    Format.sprintf
-      "%s@.%s@.(%s.set $%s)@.(%s.set $%s)"
-      (expr2string e1) (expr2string e2) (igvar_kind2string x) (igvar_name x) (igvar_kind2string y) (igvar_name y)
+  | Copn (([_; _] as glvals), _tag, Opseudo_op (Oswap _), ([_; _] as es)) ->
+    Format.sprintf "%s%s@." (exprs2string es) (set_pushed_values (List.rev glvals))
   | Cassgn _
   | Copn _
   | Csyscall _

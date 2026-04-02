@@ -1,0 +1,71 @@
+export
+fn main_aux() -> reg u64 {
+  stack u64[2] s;
+  reg ptr u64[1] p;
+  reg u64 z;
+  z = 0;
+
+  s[0] = z;
+  s[1] = z;
+
+  p = s[:u8 1:8];
+
+  reg u64 r;
+  r = p[#unaligned 0];
+
+  return r;
+}
+
+fn load(reg ptr u64[1] a) -> reg u64 {
+  reg u64 v;
+  v = a[#unaligned 0];
+  return v;
+}
+
+export
+fn deref_unaligned() -> reg u64 {
+  stack u64[2] s; // s mod u64 = -1
+  reg u64 z;
+  z = 0;
+  inline int i;
+  for i = 0 to 8 {
+    s[:u8 i] = z;
+  }
+
+  reg u64 r;
+  r = load(s.[1:1]);
+
+  return r;
+}
+
+export
+fn deref_aligned() -> reg u64 {
+  stack u64[1] s;
+  reg u64 z;
+  z = 0;
+  inline int i;
+  for i = 0 to 4 {
+    s[:u8 i] = z;
+  }
+
+  reg u64 r;
+  r = load(s.[0:1]);
+
+  return r;
+}
+
+export
+fn main_test(reg u64 x) -> reg u64 {
+  reg u64 tmp;
+
+  tmp = main_aux();
+  x += tmp;
+
+  tmp = deref_unaligned();
+  x += tmp;
+
+  tmp = deref_aligned();
+  x += tmp;
+
+  return x;
+}

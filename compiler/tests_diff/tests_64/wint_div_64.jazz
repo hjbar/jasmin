@@ -1,0 +1,108 @@
+fn sdiv (reg si64 x, reg si64 y) -> reg si64 {
+  reg si64 z;
+  z = x /s y;
+  return z;
+}
+
+fn sdiv1 (reg si64 x, reg si64 y) -> reg si64 {
+  reg si64 z;
+  z = x / y;
+  return z;
+}
+
+fn udiv (reg ui64 x, reg ui64 y) -> reg ui64 {
+  reg ui64 z;
+  z = x /u y;
+  return z;
+}
+
+fn udiv1 (reg ui64 x, reg ui64 y) -> reg ui64 {
+  reg ui64 z;
+  z = x / y;
+  return z;
+}
+
+inline fn isdiv (inline int x, inline int y) -> inline int {
+  inline int z;
+  z = x /s y;
+  return z;
+}
+
+inline fn iudiv (inline int x, inline int y) -> inline int {
+  inline int z;
+  z = x /u y;
+  return z;
+}
+
+
+fn wsdiv (reg u64 x, reg u64 y) -> reg u64 {
+  reg u64 z;
+  z = x /s y;
+  return z;
+}
+
+fn wudiv (reg u64 x, reg u64 y) -> reg u64 {
+  reg u64 z;
+  z = x /u y;
+  return z;
+}
+
+export fn main_test(reg u64 x) -> reg u64 {
+  reg u64 val;
+  stack u64 x_stack = x;
+
+  val = x_stack;
+  reg si64 sx1 = (64si)val;
+  reg si64 sy1 = 10;
+  reg si64 tmpsi1 = sdiv(sx1, sy1);
+  val += (64u)tmpsi1;
+  x_stack = val;
+
+  val = x_stack;
+  reg si64 sx2 = (64si)val;
+  reg si64 sy2 = 10;
+  reg si64 tmpsi2 = sdiv1(sx2, sy2);
+  val += (64u)tmpsi2;
+  x_stack = val;
+
+  val = x_stack;
+  reg ui64 ux1 = (64ui)val;
+  reg ui64 uy1 = 10;
+  reg ui64 tmpui1 = udiv(ux1, uy1);
+  val += (64u)tmpui1;
+  x_stack = val;
+
+  val = x_stack;
+  reg ui64 ux2 = (64ui)val;
+  reg ui64 uy2 = 10;
+  reg ui64 tmpui2 = udiv1(ux2, uy2);
+  val += (64u)tmpui2;
+  x_stack = val;
+
+  val = x_stack;
+  inline int tmpi1 = isdiv(100, 10);
+  val += (64u)tmpi1;
+  x_stack = val;
+
+  val = x_stack;
+  inline int tmpi2 = iudiv(100, 10);
+  val += (64u)tmpi2;
+  x_stack = val;
+
+  val = x_stack;
+  reg u64 wx1 = val;
+  reg u64 wy1 = 10;
+  reg u64 tmpu1 = wsdiv(wx1, wy1);
+  val += tmpu1;
+  x_stack = val;
+
+  val = x_stack;
+  reg u64 wx2 = val;
+  reg u64 wy2 = 10;
+  reg u64 tmpu2 = wudiv(wx2, wy2);
+  val += tmpu2;
+  x_stack = val;
+
+  val = x_stack;
+  return val;
+}

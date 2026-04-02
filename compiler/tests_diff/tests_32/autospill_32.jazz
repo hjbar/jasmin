@@ -1,0 +1,43 @@
+export
+fn main_aux(reg u32 arg) -> reg ui32 {
+  arg &= 0x1f;
+  reg ui32 result = 1;
+  #[spill] reg u32 i = 0;
+  while (i < arg) {
+    result <<= 1;
+    i += 1;
+  }
+  return result;
+}
+
+export
+fn xor(reg ptr u32[2] arg) -> reg u32 {
+  #[nospill]
+  reg u32 x y z;
+  x = arg[0];
+  y = arg[1];
+  z = x ^ y;
+  return z;
+}
+
+export
+fn main_test(reg u32 x) -> reg u32 {
+  reg u32 y;
+  reg u32 z;
+  reg ui32 w;
+  stack u32[2] t;
+
+  y = x;
+  y *= 5;
+
+  t[0] = x;
+  t[1] = y;
+
+  z = xor(t);
+
+  w = main_aux(z);
+
+  x += z;
+
+  return x;
+}

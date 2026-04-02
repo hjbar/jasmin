@@ -1,0 +1,22 @@
+param int x = 4;
+param int y = 1 << x;
+
+export fn load(reg ptr u8[y] v) -> reg u64 {
+  reg u64 r = v[:u64 0];
+  return r;
+}
+
+export fn main_test(reg u64 x) -> reg u64 {
+  stack u8[y] buf;
+  reg u64 res;
+
+  buf[0] = 0x01;
+  buf[1] = 0x02;
+  buf[2] = 0x03;
+  buf[3] = 0x04;
+
+  res = load(buf);
+  x += res;
+
+  return x;
+}

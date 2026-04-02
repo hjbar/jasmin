@@ -1,0 +1,82 @@
+param int N = 4;
+
+// one const argument
+export fn f1 (reg ptr u64[N] r) -> reg u64 {
+  reg u64 res;
+  res = r[0];
+  return res;
+}
+
+// two const arguments, they do not have to be disjoint
+export fn f2 (reg ptr u64[N] r1, reg ptr u64[N] r2) -> reg u64 {
+  reg u64 res tmp;
+  res = r1[0];
+  tmp = r2[0];
+  res += tmp;
+  return res;
+}
+
+// one mut argument
+export fn f3 (reg ptr u64[N] r) -> reg ptr u64[N] {
+  reg u64 tmp;
+  tmp = 2;
+  r[0] = tmp;
+  return r;
+}
+
+// two mut and one const arguments
+// the mut come first, and are returned first and in the same order
+export fn f4 (reg ptr u64[N] r1, reg ptr u64[N] r2, reg ptr u64[N] r3, reg u64 x)
+  -> reg ptr u64[N], reg ptr u64[N] {
+  reg u64 tmp;
+  r1[0] = x;
+  tmp = r3[0];
+  r2[0] = tmp;
+  return r1, r2;
+}
+
+// works well with #copy
+export fn f_copy(reg ptr u64[N] dst src) -> reg ptr u64[N] {
+  dst = #copy_64(src);
+  return dst;
+}
+
+export
+fn main_test(reg u64 x) -> reg u64 {
+  stack u64[N] s1;
+  stack u64[N] s2;
+  stack u64[N] s3;
+
+  reg ptr u64[N] p1;
+  reg ptr u64[N] p2;
+  reg ptr u64[N] p3;
+
+  reg u64 res;
+  reg u64 tmp;
+
+  tmp = 10;
+  tmp *= x;
+  s1[0] = tmp;
+  tmp = 20;
+  tmp *= x;
+  s2[0] = tmp;
+  tmp = 30;
+  tmp *= x;
+  s3[0] = tmp;
+
+  res = 0;
+  tmp = f1(s1);
+  res += tmp;
+  tmp = f2(s1, s2);
+  res += tmp;
+
+  p1 = f3(s1);
+  p1, p2 = f4(s1, s2, s3, x);
+  p3 = f_copy(s3, s2);
+
+  res += s1[0];
+  res += s2[0];
+  res += s3[0];
+
+  return res;
+}

@@ -1,0 +1,61 @@
+param int one = 1;
+param int two = one << one;
+
+u8[one] a = { 0 };
+u8[one + one] b = { 1, 2 };
+u8[one * one] c = { 3 };
+u8[two - one] d = { 4 };
+u8[- - one] e = { 5 };
+u8[-(5 /s -two)] f = { 6, 7 };
+u8[(-5) /u -two] g = { 8, 9 };
+u8[-((-5) %s -two)] h = { 11 };
+u8[(-5) %u two] i = { 12 };
+u8[(one << two) << -one] j = { 13, 14 };
+u8[(two >> -one) >> two] k = { 15 };
+
+export fn main_test(reg u32 x) -> reg u32 {
+  reg u32 tmp;
+
+  tmp = (32u)a[0];
+  x += tmp;
+
+  tmp = (32u)b[0];
+  x += tmp;
+  tmp = (32u)b[1];
+  x += tmp;
+
+  tmp = (32u)c[0];
+  x += tmp;
+
+  tmp = (32u)d[0];
+  x += tmp;
+
+  tmp = (32u)e[0];
+  x += tmp;
+
+  tmp = (32u)f[0];
+  x += tmp;
+  tmp = (32u)f[1];
+  x += tmp;
+
+  tmp = (32u)g[0];
+  x += tmp;
+  tmp = (32u)g[1];
+  x += tmp;
+
+  tmp = (32u)h[0];
+  x += tmp;
+
+  tmp = (32u)i[0];
+  x += tmp;
+
+  tmp = (32u)j[0];
+  x += tmp;
+  tmp = (32u)j[1];
+  x += tmp;
+
+  tmp = (32u)k[0];
+  x += tmp;
+
+  return x;
+}

@@ -1,0 +1,108 @@
+fn sdiv (reg si32 x, reg si32 y) -> reg si32 {
+  reg si32 z;
+  z = x /s y;
+  return z;
+}
+
+fn sdiv1 (reg si32 x, reg si32 y) -> reg si32 {
+  reg si32 z;
+  z = x / y;
+  return z;
+}
+
+fn udiv (reg ui32 x, reg ui32 y) -> reg ui32 {
+  reg ui32 z;
+  z = x /u y;
+  return z;
+}
+
+fn udiv1 (reg ui32 x, reg ui32 y) -> reg ui32 {
+  reg ui32 z;
+  z = x / y;
+  return z;
+}
+
+inline fn isdiv (inline int x, inline int y) -> inline int {
+  inline int z;
+  z = x /s y;
+  return z;
+}
+
+inline fn iudiv (inline int x, inline int y) -> inline int {
+  inline int z;
+  z = x /u y;
+  return z;
+}
+
+
+fn wsdiv (reg u32 x, reg u32 y) -> reg u32 {
+  reg u32 z;
+  z = x /s y;
+  return z;
+}
+
+fn wudiv (reg u32 x, reg u32 y) -> reg u32 {
+  reg u32 z;
+  z = x /u y;
+  return z;
+}
+
+export fn main_test(reg u32 x) -> reg u32 {
+  reg u32 val;
+  stack u32 x_stack = x;
+
+  val = x_stack;
+  reg si32 sx1 = (32si)val;
+  reg si32 sy1 = 10;
+  reg si32 tmpsi1 = sdiv(sx1, sy1);
+  val += (32u)tmpsi1;
+  x_stack = val;
+
+  val = x_stack;
+  reg si32 sx2 = (32si)val;
+  reg si32 sy2 = 10;
+  reg si32 tmpsi2 = sdiv1(sx2, sy2);
+  val += (32u)tmpsi2;
+  x_stack = val;
+
+  val = x_stack;
+  reg ui32 ux1 = (32ui)val;
+  reg ui32 uy1 = 10;
+  reg ui32 tmpui1 = udiv(ux1, uy1);
+  val += (32u)tmpui1;
+  x_stack = val;
+
+  val = x_stack;
+  reg ui32 ux2 = (32ui)val;
+  reg ui32 uy2 = 10;
+  reg ui32 tmpui2 = udiv1(ux2, uy2);
+  val += (32u)tmpui2;
+  x_stack = val;
+
+  val = x_stack;
+  inline int tmpi1 = isdiv(100, 10);
+  val += (32u)tmpi1;
+  x_stack = val;
+
+  val = x_stack;
+  inline int tmpi2 = iudiv(100, 10);
+  val += (32u)tmpi2;
+  x_stack = val;
+
+  val = x_stack;
+  reg u32 wx1 = val;
+  reg u32 wy1 = 10;
+  reg u32 tmpu1 = wsdiv(wx1, wy1);
+  val += tmpu1;
+  x_stack = val;
+
+  val = x_stack;
+  reg u32 wx2 = val;
+  reg u32 wy2 = 10;
+  reg u32 tmpu2 = wudiv(wx2, wy2);
+  val += tmpu2;
+  x_stack = val;
+
+  val = x_stack;
+  return val;
+}

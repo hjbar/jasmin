@@ -1,0 +1,54 @@
+#[ct = "secret → public"]
+export fn load(reg ptr u64[1] a) -> reg u64 {
+  reg u64 x = a[0];
+  #declassify(x);
+  return x;
+}
+
+#[ct = "secret × secret → public"]
+export fn wint_otp(reg ui64 msg mask) -> reg ui64 {
+  reg ui64 ciphertext = msg + mask;
+  #declassify(ciphertext);
+  return ciphertext;
+}
+
+/* The input array contains mixed-sensitivity data:
+  the beginning is secret whereas the end is public.
+  This program illustrates that only a slice can be declassified.
+*/
+#[ct = "secret → secret × public"]
+export fn slice(reg ptr u64[2] data) -> reg u64, reg u64 {
+  reg ptr u64[1] end = data[1:1];
+  #declassify(end);
+  reg u64 x = data[0], y = end[0];
+  return x, y;
+}
+
+export fn main_test(reg u64 n) -> reg u64 {
+    stack u64[1] a;
+    reg u64 res_a;
+
+    reg ui64 otp;
+
+    stack u64[2] data;
+
+    reg u64 x;
+    reg u64 y;
+
+
+    a[0] = n;
+    res_a = load(a);
+
+    otp = wint_otp((64ui)n, (64ui)0x1337);
+
+    data[0] = n;
+    data[1] = 0x42;
+    x, y = slice(data);
+
+    n += res_a;
+    n += (64u)otp;
+    n += x;
+    n += y;
+
+    return n;
+}
