@@ -39,15 +39,6 @@ export fn main_aux (reg u64 x y) -> reg u64 {
   return x;
 }
 
-export fn truncate(reg u64 x) -> reg u64, reg u16 {
-  reg u16 y;
-  reg u64 t = x;
-  x = x;
-  x, y = #swap(x, t);
-  x = x;
-  return x, y;
-}
-
 export fn nolhs(reg u64 x y) {
   #[keep] _, _ = #swap(x, y);
 }
@@ -65,7 +56,6 @@ export fn main_test(reg u64 x) -> reg u64 {
   reg u16 a;
   y = 5 * x;
   z = main_aux(x, y);
-  x, a = truncate(x);
   nolhs(z, z);
   return x;
 }

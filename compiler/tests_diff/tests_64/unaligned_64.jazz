@@ -1,8 +1,9 @@
 export
 fn main_aux(reg u64 x) -> reg u64 {
-  stack u64[2] a;
+  stack u64[3] a;
   a[0] = x;
   a[1] = x;
+  a[2] = x;
   x = a.[#unaligned 2];
   return x;
 }

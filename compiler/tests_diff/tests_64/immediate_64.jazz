@@ -6,7 +6,6 @@ u8 e = -0XAA;
 
 export fn main_test(reg u64 x) -> reg u64 {
   reg u64 tmp;
-  reg u64 x;
 
   tmp = (64u)a;
   x += tmp;

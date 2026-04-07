@@ -1,0 +1,97 @@
+inline fn min (reg u64 x, reg u64 y) -> reg u64 {
+  reg u64 z;
+
+  z = x;
+  if (y < x) {
+    z = y;
+  }
+
+  return z;
+}
+
+export
+fn main_test(reg u64 x) -> reg u64 {
+  reg u64 y;
+  reg u64 z;
+  reg u64 res;
+
+  res = 0;
+
+  y = x;
+  y <<= 1;
+  res += y;
+  y = x;
+  y <<= (8u) (1 & 63);
+  res += y;
+  y = x;
+  z = x;
+  z = min(z, 63);
+  y <<= (8u) (z & 63);
+  res += y;
+  y = x;
+  y <<= (8u) (y & 63);
+  res += y;
+
+  y = x;
+  y >>u= 1;
+  res += y;
+  y = x;
+  y >>u= (8u) (1 & 63);
+  res += y;
+  y = x;
+  z = x;
+  z = min(z, 63);
+  y >>u= (8u) (z & 63);
+  res += y;
+  y = x;
+  y >>u= (8u) (y & 63);
+  res += y;
+
+  y = x;
+  y >>s= 1;
+  res += y;
+  y = x;
+  y >>s= (8u) (1 & 63);
+  res += y;
+  y = x;
+  z = x;
+  z = min(z, 63);
+  y >>s= (8u) (z & 63);
+  res += y;
+  y = x;
+  y >>s= (8u) (y & 63);
+  res += y;
+
+  y = x;
+  y <<r= 1;
+  res += y;
+  y = x;
+  y <<r= (8u) (1 & 63);
+  res += y;
+  y = x;
+  z = x;
+  z = min(z, 63);
+  y <<r= (8u) (z & 63);
+  res += y;
+  y = x;
+  y <<r= (8u) (y & 63);
+  res += y;
+
+  y = x;
+  y >>r= 1;
+  res += y;
+  y = x;
+  y >>r= (8u) (1 & 63);
+  res += y;
+  y = x;
+  z = x;
+  z = min(z, 63);
+  y >>r= (8u) (z & 63);
+  res += y;
+  y = x;
+  y >>r= (8u) (y & 63);
+  res += y;
+
+  x = res;
+  return x;
+}

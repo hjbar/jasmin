@@ -1,0 +1,33 @@
+inline
+fn euclid(reg ui64 a b) -> reg ui64 {
+  while (a != 0) {
+    reg ui64 r;
+    r = b % a;
+    b = a;
+    a = r;
+  }
+  return b;
+}
+
+export
+fn gcd(reg ui64 x y) -> reg ui64 {
+  y = y;
+  x = euclid(x, y);
+  return x;
+}
+
+export
+fn main_test(reg u64 x) -> reg u64 {
+  reg ui64 y;
+  reg ui64 z;
+  reg ui64 tmp;
+
+  y = (64ui) x;
+
+  x *= 2;
+  z = (64ui) x;
+
+  tmp = gcd(y, z);
+  x = (64u) tmp;
+  return x;
+}
