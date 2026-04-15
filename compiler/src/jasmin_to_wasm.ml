@@ -11,6 +11,10 @@ let pointer_data = Arch.pointer_data
 
 (* -------------------------------------------------------------------- *)
 
+let randombytes_funname = CoreIdent.F.mk "__jasmin_syscall_randombytes__"
+
+(* -------------------------------------------------------------------- *)
+
 let internal_error = hierror ~loc:Lnone ~kind:"compilation internal error" ~internal:true
 
 (* -------------------------------------------------------------------- *)
@@ -654,6 +658,12 @@ let rec ginstr_to_instrs ~(funname : funname) ({ i_desc ; i_loc ; _ } as instr :
     let instrs = gexprs_to_instrs es in
     let sets = set_pushed_values glvals in
     instrs @ sets
+  | Csyscall (([ _ ] as glvals), RandomBytes _, ([ _; _ ] as args)) ->
+    let funname = randombytes_funname in
+    let args = gexprs_to_instrs args in
+    let call = Call (funname, args) in
+    let sets = glvals |> List.rev |> set_pushed_values in
+    call :: sets
   | Copn _
   | Csyscall _
   | Cassert _
@@ -865,6 +875,22 @@ let get_memory ~(mem_env : name) ~(mem_name : name) ~(mem_min : num) : mem list 
 
 (* -------------------------------------------------------------------- *)
 
+let get_import ~(import_env : name) ~(import_name : funname) ~(import_args : ty list) ~(import_result : ty list) : import =
+  { import_env ; import_name ; import_args ; import_result }
+
+let get_imports ~(import_env : name) : import list =
+  (* RandomBytes *)
+  let s = Syscall.syscall_sig_s pointer_data (RandomBytes (U8, Conv.pos_of_int 1)) in (* Random values for RandomBytes args *)
+  let import_name = randombytes_funname in
+  let import_args = s.scs_tin |> List.map Conv.ty_of_cty |> List.map gty_to_ty in
+  let import_result = s.scs_tout |> List.map Conv.ty_of_cty |> List.map gty_to_ty  in
+  let random_bytes = get_import ~import_env ~import_name ~import_args ~import_result in
+
+  (* All imports *)
+  [ random_bytes ]
+
+(* -------------------------------------------------------------------- *)
+
 let get_glob ~(rip_addr : Z.t) ~(rip : 'len gvar) (idx : int) (sp_glob : Word.word) : instr =
   let rip_type = gvar_type rip in
 
@@ -902,15 +928,16 @@ let get_start ~(should_init : bool) ~(init_name : funname) : funname option =
 
 (* -------------------------------------------------------------------- *)
 
-let compile_prog ~(mem_env : name) ~(mem_name : name) ~(mem_min : num) ~(rip_addr : num) ~(init_name : funname)
+let compile_prog ~(mem_env : name) ~(mem_name : name) ~(mem_min : num) ~(import_env : name) ~(rip_addr : num) ~(init_name : funname)
                   (funcs : ('info, 'asm) sfundef list) ({ sp_rsp ; sp_rip ; sp_globs ; _ } : E.sprog_extra) : Wasm_ast.wasm_module =
   let rsp = sp_rsp in
   let rip = sp_rip in
 
   let mod_mems = get_memory ~mem_env ~mem_name ~mem_min in
+  let mod_imports = get_imports ~import_env in
   let (rsp_addr, should_init, globs_instrs) = get_globs ~rip_addr ~rip sp_globs in
   let mod_funcs, mod_exports = get_funcs ~rsp_addr ~rip_addr ~rsp ~rip funcs in
   let mod_init = get_init ~should_init ~init_name globs_instrs in
   let mod_start = get_start ~should_init ~init_name in
 
-  { mod_mems ; mod_funcs ; mod_init ; mod_exports ; mod_start }
+  { mod_mems ; mod_imports ; mod_funcs ; mod_init ; mod_exports ; mod_start }

@@ -1,0 +1,70 @@
+/*
+Test for intialising variable during declaration
+The used semantic is the following :
+reg u64 x=3;
+
+is traduced to
+reg u64 x;
+x=3;
+*/
+
+fn test_basic() -> reg u64 {
+    reg u64 x=3;
+    reg u64 y=x;
+    return y;
+}
+
+fn test_multiples () -> reg u64,reg u64 {
+    reg u64 x=1,y=2;
+    return x,y;
+}
+
+fn test_primitive(){
+    reg u64[1] a;
+    a[0] = 1;
+    stack u64[1] b = #copy_64(a[0:1]);
+}
+
+fn test_randombytes () {
+    stack u8[1] r;
+    reg ptr u8[1] q = #randombytes(r);
+}
+
+fn test_calls () {
+    reg u64  x= test_basic();
+}
+
+export fn sequence() -> reg u64 {
+  reg u64 x = 1, y = x + 1;
+  return y;
+}
+
+#[stacksize = 4]
+export fn rand() -> reg u64 {
+  stack u8[4] _x x;
+  x = #randombytes(_x);
+  reg u64 r;
+  r = (64u) x[:u32 0];
+  return r;
+}
+
+export fn main_test(reg u64 x) -> reg u64 {
+  reg u64 y;
+  reg u64 z;
+  reg u64 p;
+  reg u64 q;
+
+  y, z = test_multiples();
+  test_primitive();
+  test_randombytes();
+  test_calls();
+  p = sequence();
+  q = rand();
+
+  x += y;
+  x += z;
+  x += p;
+  x += q;
+
+  return x;
+}

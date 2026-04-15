@@ -1,6 +1,7 @@
 // Import libraries
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 // Parse program inputs
 function parseInputs() {
@@ -42,6 +43,28 @@ function parseInputs() {
   return { absolutePath, size, number };
 }
 
+// RandomBytes Jasmin Syscall
+const jasmin_syscall_randombytes = (wasmMemory) => {
+  return (ptr, len) => {
+    const offset = Number(ptr);
+    const size = Number(len);
+
+    if (size > 0) {
+      const buffer = new Uint8Array(wasmMemory.buffer, offset, size);
+
+      const cryptoAPI = globalThis.crypto || require('node:crypto').webcrypto;
+
+      const MAX_CHUNK = 65536;
+      for (let i = 0; i < size; i += MAX_CHUNK) {
+        const chunk = buffer.subarray(i, Math.min(i + MAX_CHUNK, size));
+        cryptoAPI.getRandomValues(chunk);
+      }
+    }
+
+    return ptr;
+  };
+};
+
 // Wrap the Wasm program
 async function runWasm(path, size, number) {
   try {
@@ -50,7 +73,8 @@ async function runWasm(path, size, number) {
     const memory = new WebAssembly.Memory({ initial: 1 });
     const importObject = {
       env: {
-        memory: memory
+        memory: memory,
+        __jasmin_syscall_randombytes__: jasmin_syscall_randombytes(memory)
       }
     };
 

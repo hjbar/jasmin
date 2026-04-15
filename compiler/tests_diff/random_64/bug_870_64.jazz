@@ -1,0 +1,21 @@
+export
+fn rand(reg ptr u8[64] io) -> reg ptr u8[64] {
+  io = #randombytes(io);
+  return io;
+}
+
+export
+fn main_test(reg u64 x) -> reg u64 {
+  reg u64 val;
+  stack u8[64] t;
+  inline int i;
+
+  t = rand(t);
+
+  for i = 0 to 63 {
+    val = (64u) t[i];
+    x += val;
+  }
+
+  return x;
+}

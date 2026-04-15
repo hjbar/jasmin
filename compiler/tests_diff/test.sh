@@ -4,8 +4,9 @@
 VERBOSE=false
 ALL=false
 CLEAN=false
+RAND=false
 
-while getopts "vac" opt; do
+while getopts "vacr" opt; do
   case $opt in
     v)
       VERBOSE=true
@@ -15,6 +16,9 @@ while getopts "vac" opt; do
       ;;
     c)
       CLEAN=true
+      ;;
+    r)
+      RAND=true
       ;;
     \?)
       echo "Invalid option : -$OPTARG" >&2
@@ -34,6 +38,8 @@ FILES_32="$ROOT_DIR/tests_32"
 FILES_64="$ROOT_DIR/tests_64"
 EXAMPLES_32="$ROOT_DIR/examples_32"
 EXAMPLES_64="$ROOT_DIR/examples_64"
+RANDOM_32="$ROOT_DIR/random_32"
+RANDOM_64="$ROOT_DIR/random_64"
 
 VALUES=(0 1 10 42 100 -1 -10 -42 -100)
 
@@ -134,7 +140,10 @@ make -C "$PARENT_DIR"
 clear
 
 # Run the tests
-if [ "$ALL" = true ]; then
+if [ "$RAND" = true ]; then
+  run_tests "$RANDOM_32" 32
+  run_tests "$RANDOM_64" 64
+elif [ "$ALL" = true ]; then
   run_tests "$EXAMPLES_32" 32
   run_tests "$FILES_32" 32
   run_tests "$EXAMPLES_64" 64
@@ -148,4 +157,8 @@ fi
 if [ "$CLEAN" = true ]; then
   rm -f "$FILES_32"/*.{s,o,exe,wat,wasm}
   rm -f "$FILES_64"/*.{s,o,exe,wat,wasm}
+  rm -f "$EXAMPLES_32"/*.{s,o,exe,wat,wasm}
+  rm -f "$EXAMPLES_64"/*.{s,o,exe,wat,wasm}
+  rm -f "$RANDOM_32"/*.{s,o,exe,wat,wasm}
+  rm -f "$RANDOM_64"/*.{s,o,exe,wat,wasm}
 fi

@@ -279,6 +279,29 @@ let pp_funcs (fmt : formatter) (funcs : func list) : unit =
 
 (* -------------------------------------------------------------------- *)
 
+let pp_arg (fmt : formatter) (arg : ty) : unit =
+  fprintf fmt "(param %a)" pp_ty arg
+
+let pp_args (fmt : formatter) (args : ty list) : unit =
+  if args <> [] then
+    fprintf fmt " @[<hov>%a@]"
+      (pp_print_list ~pp_sep:pp_print_space pp_arg) args
+
+(* -------------------------------------------------------------------- *)
+
+let pp_import (fmt : formatter) (import : import) : unit =
+  fprintf fmt {|(import "%a" "%a" (func $%a%a%a))|}
+    pp_name import.import_env
+    pp_funname import.import_name
+    pp_funname import.import_name
+    pp_args import.import_args
+    pp_result import.import_result
+
+let pp_imports (fmt : formatter) (imports : import list) : unit =
+  pp_print_list ~pp_sep:pp_sep_double_space pp_import fmt imports
+
+(* -------------------------------------------------------------------- *)
+
 let pp_init (fmt : formatter) (func : func option) : unit =
   match func with
   | None -> ()
@@ -309,6 +332,9 @@ let pp_module (fmt : formatter) (wasm_mod : wasm_module) : unit =
 
   if wasm_mod.mod_mems <> [] then
     fprintf fmt "@\n@ %a" pp_mems wasm_mod.mod_mems;
+
+  if wasm_mod.mod_imports <> [] then
+    fprintf fmt "@\n@ %a" pp_imports wasm_mod.mod_imports;
 
   if wasm_mod.mod_funcs <> [] then
     fprintf fmt "@\n@ %a" pp_funcs wasm_mod.mod_funcs;

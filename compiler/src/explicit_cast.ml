@@ -49,7 +49,7 @@ let ext_op ~(desired : 'len gty) ~(base : 'len gty) (expr : 'len gexpr) : 'len g
     | U U128, U U128
     | U U256, U U256 -> expr
     | U desired, U base -> simplify (Papp1 (Ozeroext (desired, base), expr))
-    | _ -> assert false
+    | _, _ -> assert false
   end
   | _, _ -> assert false
 
@@ -79,7 +79,7 @@ let rec explicit_expr (desired : 'len gty) (expr : 'len gexpr) : 'len gexpr =
     ext_op ~desired ~base (Papp2 (op, e1, e2))
   | PappN (op, es) ->
     let tys_in, base = Typing.type_of_opN op in
-    let es = List.map2 explicit_expr tys_in es in
+    let es = explicit_exprs tys_in es in
 
     ext_op ~desired ~base (PappN (op, es))
   | Pif (base, cond, then_, else_) ->
@@ -93,22 +93,19 @@ let rec explicit_expr (desired : 'len gty) (expr : 'len gexpr) : 'len gexpr =
   | Pget _
   | Psub _ -> assert false
 
-let explicit_exprs (gty : 'len gty) (es : 'len gexpr list) : 'len gexpr list =
-  List.map (explicit_expr gty) es
+and explicit_exprs (gtys : 'len gty list) (es : 'len gexpr list) : 'len gexpr list =
+  List.map2 explicit_expr gtys es
 
 (* -------------------------------------------------------------------- *)
 
-let rec explicit_instr (ht : (funname, (int, unit, 'asm) gfunc) Hashtbl.t) ({ i_desc ; _ } as instr : ('len, 'info, 'asm) ginstr) : ('len, 'info, 'asm) ginstr =
+let rec explicit_instr (ht : (funname, (int, unit, 'asm) gfunc) Hashtbl.t) ({ i_desc ; i_loc ; _ } as instr : ('len, 'info, 'asm) ginstr) : ('len, 'info, 'asm) ginstr =
   let explicit_instrs = explicit_instrs ht in
 
   let i_desc =
     match i_desc with
-    | Cassgn (Lvar var, tag, gty, expr) ->
+    | Cassgn (glval, tag, gty, expr) ->
       let expr = explicit_expr gty expr in
-      Cassgn (Lvar var, tag, gty, expr)
-    | Cassgn (Lmem (aligned, wsize, info, addr), tag, gty, expr) ->
-      let expr = explicit_expr gty expr in
-      Cassgn (Lmem (aligned, wsize, info, addr), tag, gty, expr)
+      Cassgn (glval, tag, gty, expr)
     | Cif (cond, then_, else_) ->
       let cond = explicit_expr tbool cond in
       let then_ = explicit_instrs then_ in
@@ -121,32 +118,17 @@ let rec explicit_instr (ht : (funname, (int, unit, 'asm) gfunc) Hashtbl.t) ({ i_
       Cwhile (align, do_, cond, info, while_)
     | Ccall (glvals, funname, args) ->
       let tys_in = (Hashtbl.find ht funname).f_tyin in
-      let args = List.map2 (fun arg ty -> explicit_expr ty arg) args tys_in in
+      let args = explicit_exprs tys_in args in
       Ccall (glvals, funname, args)
-    | Copn ([], _tag, Opseudo_op Onop, []) -> i_desc
-    | Copn ([], tag, (Opseudo_op (Odeclassify aty) as pseudo), [ expr ]) ->
-      let gty = Conv.ty_of_cty aty in
-      let expr = explicit_expr gty expr in
-      Copn ([], tag, pseudo, [ expr ])
-    | Copn ([], tag, (Opseudo_op (Odeclassify_mem _pos) as pseudo), [ expr ]) ->
-      let gty = wsize_to_gty pointer_data in
-      let expr = explicit_expr gty expr in
-      Copn ([], tag, pseudo, [ expr ])
-    | Copn (([_; _] as glvals), tag, (Opseudo_op (Omulu wsize) as pseudo), ([_; _] as es)) ->
-      let gty = wsize_to_gty wsize in
-      let es = explicit_exprs gty es in
-      Copn (glvals, tag, pseudo, es)
-    | Copn (([_; _] as glvals), tag, (Opseudo_op (Oswap aty) as pseudo), ([_; _] as es)) ->
-      let gty = Conv.ty_of_cty aty in
-      let es = explicit_exprs gty es in
-      Copn (glvals, tag, pseudo, es)
-    | Csyscall ([ _ ] as glval, (RandomBytes (_wsize, _pos) as syscall), [ expr ]) ->
-      let gty = wsize_to_gty pointer_data in
-      let expr = explicit_expr gty expr in
-      Csyscall (glval, syscall, [ expr ])
-    | Copn (_, _, (Opseudo_op _ | Oslh _ | Oasm _), _)
-    | Csyscall _
-    | Cassgn _
+    | Copn (glvals, tag, op, es) ->
+      let tys_in, _ = Typing.type_of_sopn i_loc pointer_data Arch.msf_size Arch.asmOp op in
+      let es = explicit_exprs tys_in es in
+      Copn (glvals, tag, op, es)
+    | Csyscall (glvals, syscall, es) ->
+      let s = Syscall.syscall_sig_s pointer_data syscall in
+      let tys_in = List.map Conv.ty_of_cty s.scs_tin in
+      let es = explicit_exprs tys_in es in
+      Csyscall (glvals, syscall, es)
     | Cassert _
     | Cfor _ -> assert false
   in

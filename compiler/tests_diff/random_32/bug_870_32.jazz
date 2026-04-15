@@ -1,0 +1,21 @@
+export
+fn rand(reg ptr u8[32] io) -> reg ptr u8[32] {
+  io = #randombytes(io);
+  return io;
+}
+
+export
+fn main_test(reg u32 x) -> reg u32 {
+  reg u32 val;
+  stack u8[32] t;
+  inline int i;
+
+  t = rand(t);
+
+  for i = 0 to 31 {
+    val = (32u) t[i];
+    x += val;
+  }
+
+  return x;
+}

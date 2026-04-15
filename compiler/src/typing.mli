@@ -7,6 +7,7 @@ val ty_lval : Wsize.wsize -> L.i_loc -> lval -> ty
 val type_of_op1 : Operators.sop1 -> ty * ty
 val type_of_op2 : Operators.sop2 -> (ty * ty) * ty
 val type_of_opN : Operators.opN -> ty list * ty
+val type_of_sopn : Location.i_loc -> Wsize.wsize -> Wsize.wsize -> 'a Sopn.asmOp -> 'a Sopn.sopn -> ty list * ty list
 val ty_expr : Wsize.wsize -> L.i_loc -> expr -> ty
 val error : Prog.L.i_loc -> ('a, Format.formatter, unit, 'b) format4 -> 'a
 

@@ -10,15 +10,6 @@ type num = Z.t
 
 (* -------------------------------------------------------------------- *)
 
-type mem = {
-  mem_env : name;
-  mem_name : name;
-  mem_min : num;
-  mem_max : num option;
-}
-
-(* -------------------------------------------------------------------- *)
-
 type size =
   | U8
   | U16
@@ -45,6 +36,24 @@ type var = {
   var_name : name;
   var_uid : uid;
   var_ty : ty;
+}
+
+(* -------------------------------------------------------------------- *)
+
+type mem = {
+  mem_env : name;
+  mem_name : name;
+  mem_min : num;
+  mem_max : num option;
+}
+
+(* -------------------------------------------------------------------- *)
+
+type import = {
+  import_env : name;
+  import_name : funname;
+  import_args : ty list;
+  import_result : ty list;
 }
 
 (* -------------------------------------------------------------------- *)
@@ -106,6 +115,7 @@ type func = {
 
 type wasm_module = {
   mod_mems : mem list;
+  mod_imports : import list;
   mod_funcs : func list;
   mod_init : func option;
   mod_exports : funname list;

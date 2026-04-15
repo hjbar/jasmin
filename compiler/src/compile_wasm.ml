@@ -456,10 +456,11 @@ let compiler_back_end (sprog : ('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'ext
   let mem_env = "env" in
   let mem_name = "memory" in
   let mem_min = Z.of_int 1 in
+  let import_env = "env" in
   let rip_addr = Z.of_int 0 in
   let init_name = CoreIdent.F.mk "#init" in
 
-  let compiled_prog = Jasmin_to_wasm.compile_prog ~mem_env ~mem_name ~mem_min ~init_name ~rip_addr funcs extra in
+  let compiled_prog = Jasmin_to_wasm.compile_prog ~mem_env ~mem_name ~mem_min ~import_env ~init_name ~rip_addr funcs extra in
 
   if !debug then begin
     Format.eprintf "/* END WASM back_end */@.";

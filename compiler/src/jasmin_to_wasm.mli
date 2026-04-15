@@ -2,6 +2,7 @@ val compile_prog :
   mem_env:Wasm_ast.name ->
   mem_name:Wasm_ast.name ->
   mem_min:Wasm_ast.num ->
+  import_env:Wasm_ast.name ->
   rip_addr:Wasm_ast.num ->
   init_name:Wasm_ast.funname ->
   ('info,
