@@ -39,7 +39,9 @@ Definition pp_name name args :=
 #[only(eqbOK)] derive
 Variant wasm_op : Type := .
 *)
-Notation wasm_op := empty.
+Variant wasm_op : Type :=
+| VSHL
+.
 
 (*
 #[ export ]

@@ -1,0 +1,43 @@
+u128 vec0 = 0;
+u128 vec1 = (8u16)[ 9, 12, 0, 2, 7, 10, 11, 14 ];
+u128 vec2 = (8u16)[ 3, 6, 5, 8, 13, 15, 1, 4 ];
+
+export
+fn main_test(reg u64 x) -> reg u64 {
+  reg u128 a = vec1;
+  reg u128 b = vec2;
+
+  reg u128 x1 = a ^ b;
+  reg u128 x2 = a & b;
+  reg u128 x3 = a | b;
+  reg u128 x4 = a <<4u32 2;
+  reg u128 x5 = a >>u4u32 3;
+  reg u128 x6 = b >>s4u32 5;
+  reg u128 x7 = a <<4u32 (b &128u 31);
+  reg u128 x8 = a >>u4u32 (b &128u 31);
+  reg u128 x9 = b >>s4u32 (a &128u 31);
+  reg u128 x10 = !a;
+
+  reg u128 res = vec0;
+  res +4u32= x1;
+  res -4u32= x2;
+  res *4u32= x3;
+  res +4u32= x4;
+  res -4u32= x5;
+  res *4u32= x6;
+  res +4u32= x7;
+  res -4u32= x8;
+  res *4u32= x9;
+  res +4u32= x10;
+
+  stack u32[4] tmp;
+  tmp[:u128 0] = res;
+
+  inline int i;
+  for i = 0 to 4 {
+    reg u64 val = (64u)tmp[i];
+    x += val;
+  }
+
+  return x;
+}

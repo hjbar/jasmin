@@ -110,13 +110,14 @@ let pp_locals (fmt : formatter) (locals : var list) : unit =
 
 let pp_unop (fmt : formatter) (unop : unop) : unit =
   match unop with
-  | Extend (None, None, Some sign) -> fprintf fmt "i64.extend_i32_%a" pp_sign sign
-  | Extend (Some ty, Some size, None) ->
-    fprintf fmt "%a.extend%a_s"
-      pp_ty ty
-      pp_size size
+  | Extend sign -> fprintf fmt "i64.extend_i32_%a" pp_sign sign
   | Wrap -> fprintf fmt "i32.wrap_i64"
-  | _ -> failwith "Unary operator not well-formed"
+  | Not -> fprintf fmt "v128.not"
+  | Extract ((Simd (I32x4 | I64x2) as ty), num) ->
+    fprintf fmt "%a.extract_lane %a"
+      pp_ty ty
+      pp_num num
+  | Extract _ -> failwith "Instruction not well-formed"
 
 let pp_binop (fmt : formatter) (binop : binop) : unit =
   match binop with
@@ -182,6 +183,7 @@ let rec pp_instr (fmt : formatter) (instr : instr) : unit =
       pp_ty ty
       pp_ty simd_ty
       pp_nums nums
+  | Const _ -> failwith "Instruction not well-formed"
   | Get (scope, var) ->
     fprintf fmt "(%a.get $%a)"
       pp_scope scope
@@ -205,6 +207,7 @@ let rec pp_instr (fmt : formatter) (instr : instr) : unit =
       pp_size size
       pp_sign sign
       pp_instr instr
+  | Load _ -> failwith "Instruction not well-formed"
   | Store (ty, None, addr, Some instr) ->
     fprintf fmt "(%a.store %a %a)"
       pp_ty ty
@@ -220,6 +223,7 @@ let rec pp_instr (fmt : formatter) (instr : instr) : unit =
       pp_size size
       pp_instr addr
       pp_instr instr
+  | Store _ -> failwith "Instruction not well-formed"
   | If ([], cond, then_, else_) ->
     fprintf fmt "@[<v 2>(if@ %a@ @[<v 2>(then@ %a)@]@ @[<v 2>(else@ %a)@])@]"
       pp_instr cond
@@ -246,7 +250,6 @@ let rec pp_instr (fmt : formatter) (instr : instr) : unit =
   | Br name -> fprintf fmt "(br $%a)" pp_name name
   | Return [] -> assert false
   | Return instrs -> fprintf fmt "@[<hov 2>(return@ %a)@]" pp_instrs instrs
-  | _ -> failwith "Instruction not well-formed"
 
 and pp_instrs (fmt : formatter) (instrs : instrs) : unit =
   instrs

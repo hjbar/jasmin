@@ -59,8 +59,10 @@ type import = {
 (* -------------------------------------------------------------------- *)
 
 type unop =
-  | Extend of ty option * size option * sign option
-  | Wrap
+  | Extend of sign (* Only for i32 -> i64 *)
+  | Wrap (* Only for i64 -> i32 *)
+  | Not (* Only for v128 *)
+  | Extract of ty * num (* Only for i32x4 or i64x2 *)
 
 type binop =
   | Add of ty

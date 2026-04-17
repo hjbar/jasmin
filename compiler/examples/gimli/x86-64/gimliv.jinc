@@ -81,7 +81,7 @@ fn gimli(reg u64 io) {
   y = [:u128 io + 16 * 1];
   z = [:u128 io + 16 * 2];
 
-  (x,y,z) = gimli_body(x,y,z); 
+  (x,y,z) = gimli_body(x,y,z);
 
   [:u128 io + 16 * 0] = x;
   [:u128 io + 16 * 1] = y;

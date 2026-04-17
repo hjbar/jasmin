@@ -5,17 +5,42 @@ open Wasm_ast
 
 (* -------------------------------------------------------------------- *)
 
+let rec all_equal : 'a list -> bool = function
+  | []
+  | [ _ ] -> true
+  | x :: y :: l -> x = y && all_equal (y :: l)
+
+(* -------------------------------------------------------------------- *)
+
 module Core = CoreArchFactory.Core_arch_WASM
 module Arch = Arch_full.Arch_from_Core_arch_wasm (Core)
 let pointer_data = Arch.pointer_data
 
 (* -------------------------------------------------------------------- *)
 
-let randombytes_funname = CoreIdent.F.mk "__jasmin_syscall_randombytes__"
+let dummy_randombytes : (Wsize.wsize * BinNums.positive) Syscall_t.syscall_t = Syscall_t.RandomBytes (U8, Conv.pos_of_int 1)
+
+let randombytes_funname : funname = CoreIdent.F.mk (Asm_utils.pp_syscall dummy_randombytes)
 
 (* -------------------------------------------------------------------- *)
 
 let internal_error = hierror ~loc:Lnone ~kind:"compilation internal error" ~internal:true
+
+(* -------------------------------------------------------------------- *)
+
+let ( +@ ) = Z.add
+
+let ( -@ ) = Z.sub
+
+let ( <<@ ) = Z.shift_left
+
+let ( %@ ) = Z.erem
+
+let minus_one = Z.of_int ~-1
+
+let zero = Z.of_int 0
+
+let one = Z.of_int 1
 
 (* -------------------------------------------------------------------- *)
 
@@ -60,6 +85,20 @@ let check_size_simd simd_ty nums =
   | Simd I64x2 -> is_length 2
   | _ -> assert false
 
+let check_extract_simd = function
+  | Simd (I32x4 | I64x2) -> ()
+  | _ -> internal_error "Wrong simd type to extract vector lanes"
+
+let check_in_bounds simd_ty num =
+  check_simd_ty simd_ty;
+
+  match simd_ty with
+  | Simd I8x16 -> if Z.lt num zero || Z.gt num (Z.of_int 15) then internal_error "Indice should be between 0 and 15 to access the i8x16 vector"
+  | Simd I16x8 -> if Z.lt num zero || Z.gt num (Z.of_int 7) then internal_error "Indice should be between 0 and 7 to access the i16x8 vector"
+  | Simd I32x4 -> if Z.lt num zero || Z.gt num (Z.of_int 3) then internal_error "Indice should be between 0 and 3 to access the i32x4 vector"
+  | Simd I64x2 -> if Z.lt num zero || Z.gt num (Z.of_int 1) then internal_error "Indice should be between 0 and 1 to access the i64x2 vector"
+  | _ -> assert false
+
 let check_non_empty = function
   | [] -> internal_error "List should be non empty"
   | _ -> ()
@@ -75,11 +114,16 @@ let check_max_size int_ty size =
 
 (* -------------------------------------------------------------------- *)
 
+let extract_ simd_ty num =
+  check_extract_simd simd_ty;
+  check_in_bounds simd_ty num;
+  Extract (simd_ty, num)
+
 let const_num_ int_ty num =
   check_int_ty int_ty;
   Const (int_ty, None, [ num ])
 
-let _const_vec_ vec_ty simd_ty nums =
+let const_vec_ vec_ty simd_ty nums =
   check_vec_ty vec_ty;
   check_simd_ty simd_ty;
   check_size_simd simd_ty nums;
@@ -119,15 +163,6 @@ let if_result_ res cond then_ else_ =
   check_non_empty res;
   check_tys res;
   If (res, cond, [ then_ ], [ else_ ])
-
-let extend_ sign =
-  Extend (None, None, Some sign)
-
-(* -------------------------------------------------------------------- *)
-
-let ( +@ ) = Z.add
-
-let ( -@ ) = Z.sub
 
 (* -------------------------------------------------------------------- *)
 
@@ -254,8 +289,11 @@ let op_kind_to_size ?funname ?loc : Operators.op_kind -> size = function
 let wsize_to_int_ty ?funname ?loc : Wsize.wsize -> ty = function
   | U32 -> I32
   | U64 -> I64
-  | U256 -> assert false
-  | _ as wsize -> wsize_to_error ?funname ?loc wsize
+  | _ as wsize -> assert false |> ignore;  wsize_to_error ?funname ?loc wsize
+
+let wsize_to_vec_ty ?funname ?loc : Wsize.wsize -> ty = function
+  | U128 -> V128
+  | _ as wsize -> assert false |> ignore;  wsize_to_error ?funname ?loc wsize
 
 let wsize_to_ty ?funname ?loc : Wsize.wsize -> ty = function
   | U32 -> I32
@@ -320,6 +358,12 @@ let velem_to_op_ty : Wsize.velem -> ty = function
   | VE32 -> Simd I32x4
   | VE64 -> Simd I64x2
 
+let velem_to_size : Wsize.velem -> size = function
+  | VE8  -> U8
+  | VE16 -> U16
+  | VE32 -> U32
+  | VE64 -> U64
+
 (* -------------------------------------------------------------------- *)
 
 let is_word_op_ext : Operators.sop1 -> bool = function
@@ -332,8 +376,8 @@ let is_word_op_ext : Operators.sop1 -> bool = function
 let op_ext_to_wasm : Operators.sop1 -> unop = function
   | Osignext (U32, U64)
   | Ozeroext (U32, U64) -> Wrap
-  | Osignext (U64, U32) -> extend_ Signed
-  | Ozeroext (U64, U32) -> extend_ Unsigned
+  | Osignext (U64, U32) -> Extend Signed
+  | Ozeroext (U64, U32) -> Extend Unsigned
   | _ -> assert false
 
 (* -------------------------------------------------------------------- *)
@@ -381,13 +425,8 @@ let get_shift_size : Operators.sop2 -> size = function
   | Oror wsize -> wsize_to_size wsize
   | _ -> assert false
 
-let rec all_equal : 'a list -> bool = function
-  | []
-  | [ _ ] -> true
-  | x :: y :: l -> x = y && all_equal (y :: l)
-
 let is_mod (op : Operators.sop2) (z : Z.t) : bool =
-  let desired = (op |> get_shift_size |> size_to_num) -@ Z.of_int 1 in
+  let desired = (op |> get_shift_size |> size_to_num) -@ one in
   desired = z
 
 (* Check: (op in { lsl ; lsr; asr; rol; ror }) && (size(op) = 32 || size(op) = 64) *)
@@ -420,6 +459,38 @@ let shift_to_wasm ?funname ?loc : Operators.sop2 -> binop = function
 
 (* -------------------------------------------------------------------- *)
 
+let is_vec_shift : Operators.sop2 -> bool = function
+  | Ovlsl (_, U128)
+  | Ovlsr (_, U128)
+  | Ovasr (_, U128) -> true
+  | _ -> false
+
+let get_vec_shift_size : Operators.sop2 -> size = function
+  | Ovlsl (velem, U128)
+  | Ovlsr (velem, U128)
+  | Ovasr (velem, U128) -> velem_to_size velem
+  | _ -> assert false
+
+let is_vec_mod (op : Operators.sop2) (z : Z.t) : bool =
+  let desired = (op |> get_vec_shift_size |> size_to_num) -@ one in
+  desired = z
+
+(* Check: op in { vlsl: vlsr; vasr } && size(op) = 128 *)
+let is_vec_shift_const (op : Operators.sop2) : bool =
+  is_vec_shift op
+
+(* Check: op in { vlsl; vlsr; vasr } && size(op) = 128 && shift_size(op) in { 8; 16; 32; 64 } && z = shift_size(op) - 1 *)
+let is_vec_shift_mod (op : Operators.sop2) (z : Z.t) : bool =
+  is_vec_shift op && is_vec_mod op z
+
+let vec_shift_to_wasm : Operators.sop2 -> binop = function
+  | Ovlsl (velem, U128) -> Shl (velem_to_op_ty velem)
+  | Ovlsr (velem, U128) -> Shr (velem_to_op_ty velem, Unsigned)
+  | Ovasr (velem, U128) -> Shr (velem_to_op_ty velem, Signed)
+  | _ -> assert false
+
+(* -------------------------------------------------------------------- *)
+
 let rec gexpr_to_instr ~(funname : funname) ~(i_loc : Location.i_loc) (gexpr : 'len gexpr) : instr =
   let loc = Lmore i_loc in
 
@@ -438,7 +509,7 @@ let rec gexpr_to_instr ~(funname : funname) ~(i_loc : Location.i_loc) (gexpr : '
     let scope = ggvar_to_scope ggvar in
     let var = ggvar_to_var ggvar in
     Get (scope, var)
-  | Pload (_aligned, ((U32 | U64) as wsize), gexpr) ->
+  | Pload (_aligned, ((U32 | U64 | U128) as wsize), gexpr) ->
     let ty = wsize_to_ty wsize in
     let instr = gexpr_to_instr gexpr in
     load_ ty instr
@@ -465,17 +536,24 @@ and unop_to_instr ~(funname : funname) ~(i_loc : Location.i_loc) (op : Operators
 
   let wsize_to_size = wsize_to_size ~funname ~loc in
   let wsize_to_int_ty = wsize_to_int_ty ~funname ~loc in
+  let wsize_to_ty = wsize_to_ty ~funname ~loc in
+  let wsize_to_vec_ty = wsize_to_vec_ty ~funname ~loc in
   let op_kind_to_int_ty = op_kind_to_int_ty ~funname ~loc in
   let op_kind_to_op_ty = op_kind_to_op_ty ~funname ~loc in
 
   let gexpr_to_instr = gexpr_to_instr ~funname ~i_loc in
 
   match op, gexpr with
-  (* Special cases *)
-  | Oword_of_int wsize, Pconst z ->
+  (* Special cases on gexpr *)
+  | Oword_of_int ((U32 | U64) as wsize), Pconst z ->
     let int_ty = wsize_to_int_ty wsize in
     let num = z_to_num z in
     const_num_ int_ty num
+  | Oword_of_int (U128 as wsize), Pconst z ->
+    let vec_ty = wsize_to_vec_ty wsize in
+    let low = z_to_num (Z.extract z 0 64) in (* bits 0 to 63 *)
+    let high = z_to_num (Z.extract z 64 64) in (* bits 64 to 127 *)
+    const_vec_ vec_ty (Simd I64x2) [ low; high ]
   | op_ext, Pload (_aligned, load_size, gexpr) when is_load_size op_ext load_size ->
     (* Ensures: op_ext in { Osignext, Ozeroext } && sizes(op_ext) = (desired, base) && desired in { U32, U64 } && base in { U8, U16 } && base = load_size *)
     let (desired, base) = get_op_ext_sizes op_ext in
@@ -486,30 +564,37 @@ and unop_to_instr ~(funname : funname) ~(i_loc : Location.i_loc) (op : Operators
     let instr = gexpr_to_instr gexpr in
 
     load_size_ load_ty load_size sign instr
-  (* Common cases *)
   | _ ->
     match op with
-    | Olnot wsize ->
+    (* Special cases on op *)
+    | Olnot ((U32 | U64) as wsize) ->
       let int_ty = wsize_to_int_ty wsize in
       let instr = gexpr_to_instr gexpr in
-      let num = ~-1 |> Z.of_int |> z_to_num in
+      let num = z_to_num minus_one in
       Binop (Xor int_ty, instr, const_num_ int_ty num)
     | Oneg op ->
       let op_ty = op_kind_to_op_ty op in
-      let num = 0 |> Z.of_int |> z_to_num in
+      let num = z_to_num zero in
       let int_ty = op_kind_to_int_ty op in
       let instr = gexpr_to_instr gexpr in
       Binop (Sub op_ty, const_num_ int_ty num, instr)
-    | op_ext when is_word_op_ext op_ext ->
-      let unop = op_ext_to_wasm op_ext in
+    (* Common cases *)
+    | _ ->
+      let unop =
+        match op with
+        | Olnot U128 -> Not
+        | op_ext when is_word_op_ext op_ext -> op_ext_to_wasm op_ext
+        | Oint_of_word _
+        | Oword_of_int _
+        | Olnot _
+        | Onot
+        | Oneg _
+        | Osignext _
+        | Ozeroext _
+        | Owi1 _ -> gexpr_to_error (Papp1 (op, gexpr))
+      in
       let instr = gexpr_to_instr gexpr in
       Unop (unop, instr)
-    | Oint_of_word _
-    | Oword_of_int _
-    | Onot
-    | Osignext _
-    | Ozeroext _
-    | Owi1 _ -> gexpr_to_error (Papp1 (op, gexpr))
 
 and binop_to_instr ~(funname : funname) ~(i_loc : Location.i_loc) (op : Operators.sop2) (e1 : 'len gexpr) (e2 : 'len gexpr) : instr =
   let loc = Lmore i_loc in
@@ -517,9 +602,8 @@ and binop_to_instr ~(funname : funname) ~(i_loc : Location.i_loc) (op : Operator
   let gexpr_to_error = gexpr_to_error ~funname ~loc in
 
   let size_to_int_ty = size_to_int_ty ~funname ~loc in
-  let wsize_to_int_ty = wsize_to_int_ty ~funname ~loc in
+  let wsize_to_ty = wsize_to_ty ~funname ~loc in
   let op_kind_to_int_ty = op_kind_to_int_ty ~funname ~loc in
-  let op_kind_to_op_ty = op_kind_to_op_ty ~funname ~loc in
   let cmp_kind_to_wasm = cmp_kind_to_wasm ~funname ~loc in
   let shift_to_wasm = shift_to_wasm ~funname ~loc in
 
@@ -532,31 +616,49 @@ and binop_to_instr ~(funname : funname) ~(i_loc : Location.i_loc) (op : Operator
     let shift_size = get_shift_size op in
     let int_ty = size_to_int_ty shift_size in
 
-    let z = Z.erem z (Z.of_int 255) in
+    let z = z %@ ((one <<@ 8) -@ one) in
     if Z.compare z (size_to_num shift_size) = -1 then
       let op = shift_to_wasm op in
       let instr = gexpr_to_instr gexpr in
       Binop (op, instr, const_num_ int_ty z)
     else
-      const_num_ int_ty (0 |> Z.of_int |> z_to_num)
+      const_num_ int_ty (z_to_num zero)
   | op, e1, Papp1 (Ozeroext (U8, ws1), Papp2 (Oland ws2, e2, Papp1 (Oword_of_int ws3, Pconst z))) when is_shift_mod op [ ws1; ws2; ws3 ] z ->
     (* Ensures: (op in { lsl; lsr; asr; rol; ror }) && (size(op) = 32 || size(op) = 64) && (size(op) = ws1 = ws2 = ws3) && (z = size(op) - 1) *)
     let op = shift_to_wasm op in
-    let e1 = gexpr_to_instr e1 in
-    let e2 = gexpr_to_instr e2 in
-    Binop (op, e1, e2)
+    let i1 = gexpr_to_instr e1 in
+    let i2 = gexpr_to_instr e2 in
+    Binop (op, i1, i2)
+  | op, gexpr, Papp1 (Oword_of_int U128, Pconst z) when is_vec_shift_const op ->
+    (* Ensures: op in { vlsl: vlsr; vasr } && size(op) = 128 *)
+    let shift_size = get_vec_shift_size op in
+    let int_ty = size_to_int_ty shift_size in
+
+    let z = z %@ ((one <<@ 128) -@ one) in
+    if Z.compare z (size_to_num shift_size) = -1 then
+      let op = vec_shift_to_wasm op in
+      let instr = gexpr_to_instr gexpr in
+      Binop (op, instr, const_num_ int_ty z)
+    else
+      const_num_ int_ty (z_to_num zero)
+  | op, e1, Papp2 (Oland U128, e2, Papp1 (Oword_of_int U128, Pconst z)) when is_vec_shift_mod op z ->
+    (* Ensures: op in { vlsl; vlsr; vasr } && size(op) = 128 && shift_size(op) in { 8; 16; 32; 64 } && z = shift_size(op) - 1 *)
+    let op = vec_shift_to_wasm op in
+    let i1 = gexpr_to_instr e1 in
+    let i2 = Unop (extract_ (Simd I32x4) (z_to_num zero), gexpr_to_instr e2) in
+    Binop (op, i1, i2)
   (* Common cases *)
   | _ ->
     let binop =
       match op with
-      | Oadd op -> Add (op_kind_to_op_ty op)
-      | Osub op -> Sub (op_kind_to_op_ty op)
-      | Omul op -> Mul (op_kind_to_op_ty op)
+      | Oadd op -> Add (op_kind_to_int_ty op)
+      | Osub op -> Sub (op_kind_to_int_ty op)
+      | Omul op -> Mul (op_kind_to_int_ty op)
       | Odiv (sign, op) -> Div (op_kind_to_int_ty op, sign)
       | Omod (sign, op) -> Rem (op_kind_to_int_ty op, sign)
-      | Oland wsize -> And (wsize_to_int_ty wsize)
-      | Olor wsize -> Or (wsize_to_int_ty wsize)
-      | Olxor wsize -> Xor (wsize_to_int_ty wsize)
+      | Oland wsize -> And (wsize_to_ty wsize)
+      | Olor wsize -> Or (wsize_to_ty wsize)
+      | Olxor wsize -> Xor (wsize_to_ty wsize)
       | Oeq op -> Eq (op_kind_to_int_ty op)
       | Oneq op -> Ne (op_kind_to_int_ty op)
       | Olt cmp_kind ->
@@ -573,10 +675,8 @@ and binop_to_instr ~(funname : funname) ~(i_loc : Location.i_loc) (op : Operator
         Ge (int_ty, sign)
       | Ovadd (velem, U128) -> Add (velem_to_op_ty velem)
       | Ovsub (velem, U128) -> Sub (velem_to_op_ty velem)
+      | Ovmul (VE8, U128) -> gexpr_to_error (Papp2 (op, e1, e2))
       | Ovmul (velem, U128) -> Mul (velem_to_op_ty velem)
-      | Ovlsr (velem, U128) -> Shr (velem_to_op_ty velem, Unsigned)
-      | Ovlsl (velem, U128) -> Shl (velem_to_op_ty velem)
-      | Ovasr (velem, U128) -> Shr (velem_to_op_ty velem, Signed)
       | Obeq
       | Oand
       | Oor
@@ -708,7 +808,7 @@ and set_value ~(funname : funname) ~(i_loc : Location.i_loc) ~(instr : ('len, 'i
       let var = igvar_to_var igvar in
       let instr = gexpr_to_instr gexpr in
       [ set_ scope var instr ]
-    | Lmem (_align, ((U32 | U64) as wsize), _info, addr) ->
+    | Lmem (_align, wsize, _info, addr) ->
       let ty = wsize_to_ty wsize in
       let addr = gexpr_to_instr addr in
       let instr = gexpr_to_instr gexpr in
@@ -880,7 +980,7 @@ let get_import ~(import_env : name) ~(import_name : funname) ~(import_args : ty 
 
 let get_imports ~(import_env : name) : import list =
   (* RandomBytes *)
-  let s = Syscall.syscall_sig_s pointer_data (RandomBytes (U8, Conv.pos_of_int 1)) in (* Random values for RandomBytes args *)
+  let s = Syscall.syscall_sig_s pointer_data dummy_randombytes in
   let import_name = randombytes_funname in
   let import_args = s.scs_tin |> List.map Conv.ty_of_cty |> List.map gty_to_ty in
   let import_result = s.scs_tout |> List.map Conv.ty_of_cty |> List.map gty_to_ty  in

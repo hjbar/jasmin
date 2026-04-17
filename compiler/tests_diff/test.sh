@@ -115,14 +115,14 @@ run_tests() {
 
       if [ "$RESULT_X86" == "$RESULT_WASM" ]; then
         if [ "$VERBOSE" = true ]; then
-          printf "[Input %4s] : ${GREEN}%s${NC} %-15s\n" "$val" "OK" "$RESULT_WASM"
+          printf "[Input %4s] : ${GREEN}%s${NC} %-19s\n" "$val" "OK" "$RESULT_WASM"
         fi
       else
         error=true
         if [ "$VERBOSE" = true ]; then
-          printf "[Input %4s] : ${RED}%s${NC} X86: %-15s | WASM: %s\n" "$val" "ERROR" "$RESULT_X86" "$RESULT_WASM"
+          printf "[Input %4s] : ${RED}%s${NC} X86: %-19s | WASM: %s\n" "$val" "ERROR" "$RESULT_X86" "$RESULT_WASM"
         else
-          printf "[Input %4s] : ${RED}%s${NC} X86: %-15s | WASM: %-15s (%s)\n" "$val" "ERROR" "$RESULT_X86" "$RESULT_WASM" "$f_jazz"
+          printf "[Input %4s] : ${RED}%s${NC} X86: %-19s | WASM: %-19s (%s)\n" "$val" "ERROR" "$RESULT_X86" "$RESULT_WASM" "$f_jazz"
         fi
       fi
     done
@@ -144,13 +144,13 @@ if [ "$RAND" = true ]; then
   run_tests "$RANDOM_32" 32
   run_tests "$RANDOM_64" 64
 elif [ "$ALL" = true ]; then
-  run_tests "$EXAMPLES_32" 32
   run_tests "$FILES_32" 32
-  run_tests "$EXAMPLES_64" 64
   run_tests "$FILES_64" 64
+  run_tests "$EXAMPLES_32" 32
+  run_tests "$EXAMPLES_64" 64
 else
   run_tests "$EXAMPLES_32" 32
-  run_tests "$FILES_32" 32
+  run_tests "$EXAMPLES_64" 64
 fi
 
 # Remove build files
