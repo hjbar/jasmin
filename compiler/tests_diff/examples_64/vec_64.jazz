@@ -12,7 +12,7 @@ fn main_test(reg u64 x) -> reg u64 {
   reg u128 x3 = a | b;
   reg u128 x4 = a <<4u32 16;
   reg u128 x5 = a >>u4u32 16;
-  reg u128 x6 = a >>s4u32 16;
+  reg u128 x6 = a >>s4s32 16;
 
   reg u128 res = vec0;
   res +4u32= x1;

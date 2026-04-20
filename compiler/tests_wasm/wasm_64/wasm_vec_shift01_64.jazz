@@ -1,0 +1,25 @@
+u128 vec0 = 0;
+u128 vec1 = (16u8)[ 9, 12, 0, 2, 7, 10, 11, 14, 3, 6, 5, 8, 13, 15, 1, 4 ];
+
+export
+fn main_test(reg u64 x) -> reg u64 {
+  reg u128 a = vec1;
+
+  reg u128 x1 = #VSHL_16u8(a, 24); // Shifting by a multiple of 8, so by 0
+  reg u128 x2 = #VSHL_16u8(a, 14); // Shifting by 6 becuase 14 mod 8 = 6
+
+  reg u128 res = vec0;
+  res +16u8= x1;
+  res +16u8= x2;
+
+  stack u8[16] tmp;
+  tmp[:u128 0] = res;
+
+  inline int i;
+  for i = 0 to 16 {
+    reg u64 val = (64u)tmp[i];
+    x += val;
+  }
+
+  return x; // Should return 1656 + x
+}

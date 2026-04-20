@@ -1,0 +1,22 @@
+u128 vec1 = (16u8)[ 251, 239, 227, 211, 193, 179, 151, 137, 113, 109, 83, 61, 47, 23, 11, 7 ];
+u128 vec2 = (16u8)[ 0, 2, 4, 1, 3, 7, 5, 6, 9, 10, 8, 12, 14, 11, 13, 15 ];
+
+export
+fn main_test(reg u64 x) -> reg u64 {
+  reg u128 a = vec1;
+  reg u128 b = vec2;
+
+  reg u128 res = #SWIZZLE(a, b);
+
+  stack u8[16] tmp;
+  tmp[:u128 0] = res;
+
+  x += (64u)tmp[0];
+  x *= (64u)tmp[3];
+  x += (64u)tmp[6];
+  x -= (64u)tmp[9];
+  x += (64u)tmp[12];
+  x *= (64u)tmp[15];
+
+  return x; // Should return ((((((x + 251) * 239) + 179) - 83) + 11) * 7) = 1673x + 420672
+}

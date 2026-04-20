@@ -92,7 +92,7 @@ module WasmTarget: AsmTarget
   and type xreg = Arch_utils.empty
   and type rflag = Arch_utils.empty
   and type cond = Wasm_decl.condt
-  and type asm_op = Arch_utils.empty (* and type asm_op = Wasm_instr_decl.wasm_op *)
+  and type asm_op = Wasm_instr_decl.wasm_op
 = struct
 
   type reg   = Wasm_decl.register
@@ -100,7 +100,7 @@ module WasmTarget: AsmTarget
   type xreg  = Arch_utils.empty
   type rflag = Arch_utils.empty
   type cond  = Wasm_decl.condt
-  and asm_op = Arch_utils.empty (* type asm_op = Wasm_instr_decl.wasm_op *)
+  type asm_op = Wasm_instr_decl.wasm_op
 
 
   (* TODO_RISCV: Review. *)

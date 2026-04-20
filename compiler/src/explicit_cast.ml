@@ -62,10 +62,11 @@ let rec explicit_expr (desired : 'len gty) (expr : 'len gexpr) : 'len gexpr =
     let base = ggvar.gv.pl_desc.v_ty in
 
     ext_op ~desired ~base expr
-  | Pload (_aligned, wsize, _expr) ->
+  | Pload (aligned, wsize, addr) ->
     let base = wsize_to_gty wsize in
+    let addr = explicit_expr (wsize_to_gty pointer_data) addr in
 
-    ext_op ~desired ~base expr
+    ext_op ~desired ~base (Pload (aligned, wsize, addr))
   | Papp1 (op, expr) ->
     let ty_in, base = Typing.type_of_op1 op in
     let expr = explicit_expr ty_in expr in
@@ -98,12 +99,27 @@ and explicit_exprs (gtys : 'len gty list) (es : 'len gexpr list) : 'len gexpr li
 
 (* -------------------------------------------------------------------- *)
 
+let explicit_glval : 'len glval -> 'len glval = function
+  | Lmem (align, wsize, loc, addr) ->
+    let addr = explicit_expr (wsize_to_gty pointer_data) addr in
+    Lmem (align, wsize, loc, addr)
+  | Lnone _
+  | Lvar _ as glval -> glval
+  | Laset _
+  | Lasub _ -> assert false
+
+let explicit_glvals (glvals : 'len glval list) : 'len glval list =
+  List.map explicit_glval glvals
+
+(* -------------------------------------------------------------------- *)
+
 let rec explicit_instr (ht : (funname, (int, unit, 'asm) gfunc) Hashtbl.t) ({ i_desc ; i_loc ; _ } as instr : ('len, 'info, 'asm) ginstr) : ('len, 'info, 'asm) ginstr =
   let explicit_instrs = explicit_instrs ht in
 
   let i_desc =
     match i_desc with
     | Cassgn (glval, tag, gty, expr) ->
+      let glval = explicit_glval glval in
       let expr = explicit_expr gty expr in
       Cassgn (glval, tag, gty, expr)
     | Cif (cond, then_, else_) ->
@@ -117,14 +133,17 @@ let rec explicit_instr (ht : (funname, (int, unit, 'asm) gfunc) Hashtbl.t) ({ i_
       let while_ = explicit_instrs while_ in
       Cwhile (align, do_, cond, info, while_)
     | Ccall (glvals, funname, args) ->
+      let glvals = explicit_glvals glvals in
       let tys_in = (Hashtbl.find ht funname).f_tyin in
       let args = explicit_exprs tys_in args in
       Ccall (glvals, funname, args)
     | Copn (glvals, tag, op, es) ->
+      let glvals = explicit_glvals glvals in
       let tys_in, _ = Typing.type_of_sopn i_loc pointer_data Arch.msf_size Arch.asmOp op in
       let es = explicit_exprs tys_in es in
       Copn (glvals, tag, op, es)
     | Csyscall (glvals, syscall, es) ->
+      let glvals = explicit_glvals glvals in
       let s = Syscall.syscall_sig_s pointer_data syscall in
       let tys_in = List.map Conv.ty_of_cty s.scs_tin in
       let es = explicit_exprs tys_in es in

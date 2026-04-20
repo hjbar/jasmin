@@ -1,0 +1,21 @@
+u128 vec1 = (4u32)[ 10, 20, 30, 40 ];
+u128 vec2 = (4u32)[ 94, 56, 28, 37 ];
+
+export
+fn main_test(reg u64 x) -> reg u64 {
+  reg u128 a = vec1;
+  reg u128 b = vec2;
+
+  reg u128 res = a <<4u32 (b &128u 31); // Shifting by 5 becuase 37 mod 32 = 5
+
+  stack u32[4] tmp;
+  tmp[:u128 0] = res;
+
+  inline int i;
+  for i = 0 to 4 {
+    reg u64 val = (64u)tmp[i];
+    x += val;
+  }
+
+  return x; // Should return 3200 + x
+}

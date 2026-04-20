@@ -160,6 +160,7 @@ let pp_binop (fmt : formatter) (binop : binop) : unit =
     fprintf fmt "%a.ge_%a"
       pp_ty ty
       pp_sign sign
+  | Swizzle -> fprintf fmt "i8x16.swizzle"
 
 let rec pp_instr (fmt : formatter) (instr : instr) : unit =
   match instr with

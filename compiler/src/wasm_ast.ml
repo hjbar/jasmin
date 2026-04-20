@@ -83,6 +83,7 @@ type binop =
   | Le of ty * sign
   | Gt of ty * sign
   | Ge of ty * sign
+  | Swizzle (* Only for the i8x16 interpretation *)
 
 type instr =
   | Nop

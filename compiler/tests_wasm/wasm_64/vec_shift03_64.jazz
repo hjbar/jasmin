@@ -1,0 +1,21 @@
+u128 vec1 = (4u32)[ 0x80000000, 0xFFFFFFFF, 0x7FFFFFFF, 0x40000000 ];
+u128 vec2 = (4u32)[ 299, 199, 99, 5 ];
+
+export
+fn main_test(reg u64 x) -> reg u64 {
+  reg u128 a = vec1;
+  reg u128 b = vec2;
+
+  reg u128 res = a >>s4s32 (b &128u 31); // Shifting by 5
+
+  stack u32[4] tmp;
+  tmp[:u128 0] = res;
+
+  inline int i;
+  for i = 0 to 4 {
+    reg u64 val = (64u)tmp[i];
+    x += val;
+  }
+
+  return x; // Should return 8 623 489 022 + x
+}

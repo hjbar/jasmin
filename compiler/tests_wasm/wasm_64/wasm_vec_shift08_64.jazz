@@ -1,0 +1,24 @@
+u128 vec0 = 0;
+u128 vec1 = (2u64)[ 0xFFFFFFFFFFFFFFFF, 0xF1F1F1F1F1F1F1F1 ];
+
+export
+fn main_test(reg u64 x) -> reg u64 {
+  reg u128 a = vec1;
+
+  reg u128 x1 = #VSHR_2u64(a, 256); // Shifting by a multiple of 64, so by 0
+  reg u128 x2 = #VSHR_2u64(a, 100); // Shifting by 36 becuase 100 mod 64 = 36
+
+  reg u128 res = vec0;
+  res +2u64= x1;
+  res +2u64= x2;
+
+  stack u64[2] tmp;
+  tmp[:u128 0] = res;
+
+  inline int i;
+  for i = 0 to 2 {
+    x += tmp[i];
+  }
+
+  return x; // Should return -1 012 762 419 210 940 146 + x
+}

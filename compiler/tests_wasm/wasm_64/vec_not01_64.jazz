@@ -1,0 +1,18 @@
+u128 vec1 = (16u8)[ 9, 12, 0, 2, 7, 10, 11, 14, 3, 6, 5, 8, 13, 15, 1, 4 ];
+
+export
+fn main_test(reg u64 x) -> reg u64 {
+  reg u128 a = vec1;
+  reg u128 res = !a;
+
+  stack u8[16] tmp;
+  tmp[:u128 0] = res;
+
+  inline int i;
+  for i = 0 to 16 {
+    reg u64 val = (64u)tmp[i];
+    x += val;
+  }
+
+  return x; // Should return 3960 + x
+}

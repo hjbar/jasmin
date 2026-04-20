@@ -70,7 +70,7 @@ async function runWasm(path, size, number) {
   try {
     const wasmBuffer = fs.readFileSync(path);
 
-    const memory = new WebAssembly.Memory({ initial: 1 });
+    const memory = new WebAssembly.Memory({ initial: 1024, maximum: 32768 });
     const importObject = {
       env: {
         memory: memory,

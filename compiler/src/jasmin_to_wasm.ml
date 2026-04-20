@@ -16,6 +16,9 @@ module Core = CoreArchFactory.Core_arch_WASM
 module Arch = Arch_full.Arch_from_Core_arch_wasm (Core)
 let pointer_data = Arch.pointer_data
 
+let gty_eq_pd_ty (ty : 'len gty) : bool =
+  ty = Bty (U pointer_data)
+
 (* -------------------------------------------------------------------- *)
 
 let dummy_randombytes : (Wsize.wsize * BinNums.positive) Syscall_t.syscall_t = Syscall_t.RandomBytes (U8, Conv.pos_of_int 1)
@@ -136,6 +139,7 @@ let set_stack_ scope var =
   Set (scope, var, None)
 
 let load_ ty instr =
+  check_ty ty;
   Load (ty, None, None, instr)
 
 let load_size_ int_ty size sign instr =
@@ -252,7 +256,7 @@ let gexpr_to_error ~(funname : funname) ~(loc : error_loc) (expr : 'len gexpr) =
 
 let ginstr_to_error ~(funname : funname) ~(loc : error_loc) (instr : ('len, 'info, 'asm) ginstr) =
   let debug = !debug in
-  raise_error ~loc ~funname "Don't know how to handle the instruction %a" (Printer.pp_instr ~debug U32 U32 Arch.asmOp) instr
+  raise_error ~loc ~funname "Don't know how to handle the instruction %a" (Printer.pp_instr ~debug pointer_data Arch.msf_size Arch.asmOp) instr
 
 (* -------------------------------------------------------------------- *)
 
@@ -289,11 +293,11 @@ let op_kind_to_size ?funname ?loc : Operators.op_kind -> size = function
 let wsize_to_int_ty ?funname ?loc : Wsize.wsize -> ty = function
   | U32 -> I32
   | U64 -> I64
-  | _ as wsize -> assert false |> ignore;  wsize_to_error ?funname ?loc wsize
+  | _ as wsize -> wsize_to_error ?funname ?loc wsize
 
 let wsize_to_vec_ty ?funname ?loc : Wsize.wsize -> ty = function
   | U128 -> V128
-  | _ as wsize -> assert false |> ignore;  wsize_to_error ?funname ?loc wsize
+  | _ as wsize -> wsize_to_error ?funname ?loc wsize
 
 let wsize_to_ty ?funname ?loc : Wsize.wsize -> ty = function
   | U32 -> I32
@@ -722,6 +726,7 @@ let rec ginstr_to_instrs ~(funname : funname) ({ i_desc ; i_loc ; _ } as instr :
   let gexpr_to_instr = gexpr_to_instr ~funname ~i_loc in
   let gexprs_to_instrs = gexprs_to_instrs ~funname ~i_loc in
   let ginstrs_to_instrs = ginstrs_to_instrs ~funname in
+  let set_instr = set_instr ~funname ~i_loc ~instr in
   let set_value = set_value ~funname ~i_loc ~instr in
   let set_pushed_values = set_pushed_values ~funname ~i_loc ~instr in
   let get_mulu = get_mulu ~funname ~i_loc ~instr in
@@ -758,6 +763,20 @@ let rec ginstr_to_instrs ~(funname : funname) ({ i_desc ; i_loc ; _ } as instr :
     let instrs = gexprs_to_instrs es in
     let sets = set_pushed_values glvals in
     instrs @ sets
+  | Copn ([ x ], _tag, Oasm (Arch_extra.BaseOp (None, Wasm_instr_decl.VSHL velem)), [ e1; e2 ]) ->
+    let op = Shl (velem_to_op_ty velem) in
+    let i1 = gexpr_to_instr e1 in
+    let i2 = gexpr_to_instr e2 in
+    set_instr x (Binop (op, i1, i2))
+  | Copn ([ x ], _tag, Oasm (Arch_extra.BaseOp (None, Wasm_instr_decl.VSHR (sign, velem))), [ e1; e2 ]) ->
+    let op = Shr (velem_to_op_ty velem, sign) in
+    let i1 = gexpr_to_instr e1 in
+    let i2 = gexpr_to_instr e2 in
+    set_instr x (Binop (op, i1, i2))
+  | Copn ([ x ], _tag, Oasm (Arch_extra.BaseOp (None, Wasm_instr_decl.SWIZZLE)), [ e1; e2 ]) ->
+    let i1 = gexpr_to_instr e1 in
+    let i2 = gexpr_to_instr e2 in
+    set_instr x (Binop (Swizzle, i1, i2))
   | Csyscall (([ _ ] as glvals), RandomBytes _, ([ _; _ ] as args)) ->
     let funname = randombytes_funname in
     let args = gexprs_to_instrs args in
@@ -772,21 +791,41 @@ let rec ginstr_to_instrs ~(funname : funname) ({ i_desc ; i_loc ; _ } as instr :
 and ginstrs_to_instrs ~(funname : funname) (instrs : ('len, 'info, 'asm) ginstr list) : instrs =
   instrs |> List.map (ginstr_to_instrs ~funname) |> List.flatten
 
-and set_value ~(funname : funname) ~(i_loc : Location.i_loc) ~(instr : ('len, 'info, 'asm) ginstr) (gexpr : 'len gexpr) (glval : 'len glval) : instrs =
+and set_instr ~(funname : funname) ~(i_loc : Location.i_loc) ~(instr : ('len, 'info, 'asm) ginstr) (glval : 'len glval) (winstr : instr) : instrs =
   let loc = Lmore i_loc in
 
   let ginstr_to_error = ginstr_to_error ~funname ~loc in
 
-  let wsize_to_size = wsize_to_size ~funname ~loc in
   let wsize_to_ty = wsize_to_ty ~funname ~loc in
   let igvar_to_var = igvar_to_var ~funname ~loc in
 
   let gexpr_to_instr = gexpr_to_instr ~funname ~i_loc in
 
+  match glval with
+  | Lnone _ -> [ winstr ; Drop ]
+  | Lvar igvar ->
+    let scope = igvar_to_scope igvar in
+    let var = igvar_to_var igvar in
+    [ set_ scope var winstr ]
+  | Lmem (_align, wsize, _info, addr) ->
+    let ty = wsize_to_ty wsize in
+    let addr = gexpr_to_instr addr in
+    [ store_ ty addr winstr ]
+  | _ -> ginstr_to_error instr
+
+and set_value ~(funname : funname) ~(i_loc : Location.i_loc) ~(instr : ('len, 'info, 'asm) ginstr) (gexpr : 'len gexpr) (glval : 'len glval) : instrs =
+  let loc = Lmore i_loc in
+
+  let wsize_to_size = wsize_to_size ~funname ~loc in
+  let wsize_to_ty = wsize_to_ty ~funname ~loc in
+
+  let gexpr_to_instr = gexpr_to_instr ~funname ~i_loc in
+  let set_instr = set_instr ~funname ~i_loc ~instr in
+
   match glval, gexpr with
   (* Special cases *)
   | Lmem (_align, ((U8 | U16) as wsize), _info, addr), Papp1 (Oword_of_int wsize', Pconst num) when wsize = wsize' ->
-    let store_ty = wsize_to_ty U64 in (* FIXME : how to choose store_ty ? *)
+    let store_ty = wsize_to_ty pointer_data in (* FIXME : which wsize choose ? *)
     let store_size = wsize_to_size wsize in
     let addr = gexpr_to_instr addr in
     let instr = const_num_ store_ty num in
@@ -798,22 +837,7 @@ and set_value ~(funname : funname) ~(i_loc : Location.i_loc) ~(instr : ('len, 'i
     let instr = gexpr_to_instr gexpr in
     [ store_size_ store_ty store_size addr instr ]
   (* Commom cases *)
-  | _ ->
-    match glval with
-    | Lnone _ ->
-      let instr = gexpr_to_instr gexpr in
-      [ instr ; Drop ]
-    | Lvar igvar ->
-      let scope = igvar_to_scope igvar in
-      let var = igvar_to_var igvar in
-      let instr = gexpr_to_instr gexpr in
-      [ set_ scope var instr ]
-    | Lmem (_align, wsize, _info, addr) ->
-      let ty = wsize_to_ty wsize in
-      let addr = gexpr_to_instr addr in
-      let instr = gexpr_to_instr gexpr in
-      [ store_ ty addr instr ]
-    | _ -> ginstr_to_error instr
+  | _ -> set_instr glval (gexpr_to_instr gexpr)
 
 and set_pushed_value ~(funname : funname) ~(i_loc : Location.i_loc) ~(instr : ('len, 'info, 'asm) ginstr) (glval : 'len glval) : instr =
   let loc = Lmore i_loc in
@@ -994,7 +1018,7 @@ let get_imports ~(import_env : name) : import list =
 let get_glob ~(rip_addr : Z.t) ~(rip : 'len gvar) (idx : int) (sp_glob : Word.word) : instr =
   let rip_type = gvar_type rip in
 
-  if rip_type <> Bty (U pointer_data) then raise_dummy_error "Don't know how to handle RIP of this type %s" (gty_to_error rip_type)
+  if not (gty_eq_pd_ty rip_type) then raise_dummy_error "Don't know how to handle RIP of this type %s" (gty_to_error rip_type)
   else begin
     let rip_ty = gty_to_int_ty rip_type in
     let addr = z_to_num (rip_addr +@ Z.of_int idx) in
@@ -1029,7 +1053,7 @@ let get_start ~(should_init : bool) ~(init_name : funname) : funname option =
 (* -------------------------------------------------------------------- *)
 
 let compile_prog ~(mem_env : name) ~(mem_name : name) ~(mem_min : num) ~(import_env : name) ~(rip_addr : num) ~(init_name : funname)
-                  (funcs : ('info, 'asm) sfundef list) ({ sp_rsp ; sp_rip ; sp_globs ; _ } : E.sprog_extra) : Wasm_ast.wasm_module =
+                  ((funcs : ('info, 'asm) sfundef list), ({ sp_rsp ; sp_rip ; sp_globs ; _ } : E.sprog_extra)) : Wasm_ast.wasm_module =
   let rsp = sp_rsp in
   let rip = sp_rip in
 

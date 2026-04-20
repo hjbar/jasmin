@@ -1,0 +1,25 @@
+u128 vec0 = 0;
+u128 vec1 = (4u32)[ 0xFFFFFFFF, 0xF1F1F1F1, 0x1F1F1F1F, 0xABCDABCD ];
+
+export
+fn main_test(reg u64 x) -> reg u64 {
+  reg u128 a = vec1;
+
+  reg u128 x1 = #VSHR_4s32(a, 128); // Shifting by a multiple of 32, so by 0
+  reg u128 x2 = #VSHR_4s32(a, 51); // Shifting by 19 becuase 51 mod 32 = 19
+
+  reg u128 res = vec0;
+  res +4u32= x1;
+  res +4u32= x2;
+
+  stack u32[4] tmp;
+  tmp[:u128 0] = res;
+
+  inline int i;
+  for i = 0 to 4 {
+    reg u64 val = (64u)tmp[i];
+    x += val;
+  }
+
+  return x; // Should return 11 758 646 389 + x
+}
