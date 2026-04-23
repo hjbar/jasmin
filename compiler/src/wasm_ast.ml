@@ -58,6 +58,13 @@ type import = {
 
 (* -------------------------------------------------------------------- *)
 
+type data = {
+  data_ofs : num;
+  data_bytes : num list;
+}
+
+(* -------------------------------------------------------------------- *)
+
 type unop =
   | Extend of sign (* Only for i32 -> i64 *)
   | Wrap (* Only for i64 -> i32 *)
@@ -117,8 +124,10 @@ type func = {
 (* -------------------------------------------------------------------- *)
 
 type wasm_module = {
+  mod_name : name;
   mod_mems : mem list;
   mod_imports : import list;
+  mod_datas : data list;
   mod_funcs : func list;
   mod_init : func option;
   mod_exports : funname list;

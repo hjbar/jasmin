@@ -12,12 +12,24 @@ let rec all_equal : 'a list -> bool = function
 
 (* -------------------------------------------------------------------- *)
 
+let rec has_randombytes_i i =
+  match i.i_desc with
+  | Csyscall (_, RandomBytes _, _) -> true
+  | Cassgn _ | Copn _ | Ccall _ | Cassert _ -> false
+  | Cif (_, c1, c2) | Cwhile(_, c1, _, _, c2) -> has_randombytes_c c1 || has_randombytes_c c2
+  | Cfor (_, _, c) -> has_randombytes_c c
+
+and has_randombytes_c c = List.exists has_randombytes_i c
+
+let has_randombytes_f (_, f) = has_randombytes_c f.f_body
+
+let has_randombytes_fs fs = List.exists has_randombytes_f fs
+
+(* -------------------------------------------------------------------- *)
+
 module Core = CoreArchFactory.Core_arch_WASM
 module Arch = Arch_full.Arch_from_Core_arch_wasm (Core)
 let pointer_data = Arch.pointer_data
-
-let gty_eq_pd_ty (ty : 'len gty) : bool =
-  ty = Bty (U pointer_data)
 
 (* -------------------------------------------------------------------- *)
 
@@ -710,13 +722,13 @@ let fresh_block_name =
   let cpt = ref ~-1 in
   fun () ->
     incr cpt;
-    Format.sprintf "#block_%d" !cpt
+    Format.sprintf "$block_%d" !cpt
 
 let fresh_loop_name =
   let cpt = ref ~-1 in
   fun () ->
     incr cpt;
-    Format.sprintf "#loop_%d" !cpt
+    Format.sprintf "$loop_%d" !cpt
 
 let rec ginstr_to_instrs ~(funname : funname) ({ i_desc ; i_loc ; _ } as instr : ('len, 'info, 'asm) ginstr) : instrs =
   let loc = Lmore i_loc in
@@ -999,69 +1011,49 @@ let get_memory ~(mem_env : name) ~(mem_name : name) ~(mem_min : num) : mem list 
 
 (* -------------------------------------------------------------------- *)
 
-let get_import ~(import_env : name) ~(import_name : funname) ~(import_args : ty list) ~(import_result : ty list) : import =
-  { import_env ; import_name ; import_args ; import_result }
-
-let get_imports ~(import_env : name) : import list =
-  (* RandomBytes *)
+let get_randombytes_import ~(import_env : name) : import =
   let s = Syscall.syscall_sig_s pointer_data dummy_randombytes in
   let import_name = randombytes_funname in
   let import_args = s.scs_tin |> List.map Conv.ty_of_cty |> List.map gty_to_ty in
   let import_result = s.scs_tout |> List.map Conv.ty_of_cty |> List.map gty_to_ty  in
-  let random_bytes = get_import ~import_env ~import_name ~import_args ~import_result in
+  { import_env ; import_name ; import_args ; import_result }
 
-  (* All imports *)
-  [ random_bytes ]
-
-(* -------------------------------------------------------------------- *)
-
-let get_glob ~(rip_addr : Z.t) ~(rip : 'len gvar) (idx : int) (sp_glob : Word.word) : instr =
-  let rip_type = gvar_type rip in
-
-  if not (gty_eq_pd_ty rip_type) then raise_dummy_error "Don't know how to handle RIP of this type %s" (gty_to_error rip_type)
-  else begin
-    let rip_ty = gty_to_int_ty rip_type in
-    let addr = z_to_num (rip_addr +@ Z.of_int idx) in
-    let value = cz_to_num sp_glob in
-    store_size_ rip_ty U8 (const_num_ rip_ty addr) (const_num_ rip_ty value)
-  end
-
-let get_globs ~(rip_addr : Z.t) ~(rip : 'len gvar) (sp_globs : Word.word list) : Z.t * bool * instrs =
-  let rsp_addr = rip_addr +@ Z.of_int (List.length sp_globs) in
-  let should_init = Z.compare rip_addr rsp_addr <> 0 in
-  let globs = List.mapi (get_glob ~rip_addr ~rip) sp_globs in
-  (rsp_addr, should_init, globs)
+let get_imports ~(import_env : name) (funcs : ('info, 'asm) sfundef list) : import list =
+  match has_randombytes_fs funcs with
+  | false -> []
+  | true -> [ get_randombytes_import ~import_env ]
 
 (* -------------------------------------------------------------------- *)
 
-let get_init ~(should_init : bool) ~(init_name : funname) (globs : instrs) : func option =
-  if not should_init then None
-  else begin
-    let func_name = init_name in
-    let func_params = [] in
-    let func_result = [] in
-    let func_locals = [] in
-    let func_instrs = globs in
-    Some { func_name ; func_params ; func_result ; func_locals ; func_instrs }
-  end
+let get_data ~(rip_addr : num) (sp_globs : Word.word list) : data =
+  let data_ofs = rip_addr in
+  let data_bytes = List.map cz_to_num sp_globs in
+  { data_ofs; data_bytes }
+
+let get_datas ~(rip_addr : num) (sp_globs : Word.word list) : data list =
+  let data = get_data ~rip_addr sp_globs in
+  match data.data_bytes with
+  | [] -> []
+  | _ -> [ data ]
 
 (* -------------------------------------------------------------------- *)
 
-let get_start ~(should_init : bool) ~(init_name : funname) : funname option =
-  if should_init then Some init_name else None
+let get_rsp_addr ~(rip_addr : Z.t) (sp_globs : Word.word list) : Z.t =
+  rip_addr +@ Z.of_int (List.length sp_globs)
 
 (* -------------------------------------------------------------------- *)
 
-let compile_prog ~(mem_env : name) ~(mem_name : name) ~(mem_min : num) ~(import_env : name) ~(rip_addr : num) ~(init_name : funname)
+let compile_prog ~(mod_name : name) ~(mem_env : name) ~(mem_name : name) ~(mem_min : num) ~(import_env : name) ~(rip_addr : num)
                   ((funcs : ('info, 'asm) sfundef list), ({ sp_rsp ; sp_rip ; sp_globs ; _ } : E.sprog_extra)) : Wasm_ast.wasm_module =
   let rsp = sp_rsp in
   let rip = sp_rip in
+  let rsp_addr = get_rsp_addr ~rip_addr sp_globs in
 
   let mod_mems = get_memory ~mem_env ~mem_name ~mem_min in
-  let mod_imports = get_imports ~import_env in
-  let (rsp_addr, should_init, globs_instrs) = get_globs ~rip_addr ~rip sp_globs in
+  let mod_imports = get_imports ~import_env funcs in
+  let mod_datas = get_datas ~rip_addr sp_globs in
   let mod_funcs, mod_exports = get_funcs ~rsp_addr ~rip_addr ~rsp ~rip funcs in
-  let mod_init = get_init ~should_init ~init_name globs_instrs in
-  let mod_start = get_start ~should_init ~init_name in
+  let mod_init = None in
+  let mod_start = None in
 
-  { mod_mems ; mod_imports ; mod_funcs ; mod_init ; mod_exports ; mod_start }
+  { mod_name; mod_mems ; mod_imports ; mod_datas; mod_funcs ; mod_init ; mod_exports ; mod_start }

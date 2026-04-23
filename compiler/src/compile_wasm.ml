@@ -448,7 +448,7 @@ let compile (type reg regx xreg rflag cond asm_op extra_op)
 module Core = CoreArchFactory.Core_arch_WASM
 module Arch = Arch_full.Arch_from_Core_arch_wasm (Core)
 
-let compiler_back_end (sprog : ('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op Expr._sprog) : Wasm_ast.wasm_module =
+let compiler_back_end ~(mod_name : Wasm_ast.name) (sprog : ('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op Expr._sprog) : Wasm_ast.wasm_module =
   if !debug then begin
     Format.eprintf "/* -------------------------------------------------------------------- */@.";
     Format.eprintf "/* START WASM back_end */@."
@@ -480,10 +480,9 @@ let compiler_back_end (sprog : ('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'ext
   let mem_name = "memory" in
   let mem_min = Z.of_int 1 in
   let import_env = "env" in
-  let rip_addr = Z.of_int 0 in
-  let init_name = CoreIdent.F.mk "#init" in
+  let rip_addr = Z.of_int 10000 in
 
-  let compiled_prog = Jasmin_to_wasm.compile_prog ~mem_env ~mem_name ~mem_min ~import_env ~init_name ~rip_addr sprog in
+  let compiled_prog = Jasmin_to_wasm.compile_prog ~mod_name ~mem_env ~mem_name ~mem_min ~import_env ~rip_addr sprog in
 
   if !debug then begin
     Format.fprintf Format.std_formatter "%a\n%!" Pp_wasm_ast.pp_module compiled_prog;

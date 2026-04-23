@@ -3,6 +3,19 @@ open Wasm_ast
 
 (* -------------------------------------------------------------------- *)
 
+let rec group_by n =
+  let rec split n l acc =
+    match n, l with
+    | 0, _
+    | _, [] -> List.rev acc, l
+    | n, x :: l -> split (n - 1) l (x :: acc)
+  in
+  function
+  | [] -> []
+  | l ->
+    let group, l = split n l [] in
+    group :: group_by n l
+
 let is_visible = function Return [] -> false | _ -> true
 
 let pp_sep_double_space fmt () = fprintf fmt "@ @ "
@@ -21,6 +34,9 @@ let pp_sign (fmt : formatter) (sign : sign) : unit =
   match sign with
   | Signed -> fprintf fmt "s"
   | Unsigned -> fprintf fmt "u"
+
+let pp_num_as_byte (fmt : formatter) (num : num) : unit =
+  fprintf fmt "%s" (Z.format "%02x" num)
 
 let pp_num (fmt : formatter) (num : num) : unit =
   Z.pp_print fmt num
@@ -51,25 +67,6 @@ let pp_ty (fmt : formatter) (ty : ty) : unit =
   | Simd I16x8 -> fprintf fmt "i16x8"
   | Simd I32x4 -> fprintf fmt "i32x4"
   | Simd I64x2 -> fprintf fmt "i64x2"
-
-(* -------------------------------------------------------------------- *)
-
-let pp_mem (fmt : formatter) (mem : mem) : unit =
-  match mem.mem_max with
-  | None ->
-    fprintf fmt {|(import "%a" "%a" (memory %a))|}
-      pp_name mem.mem_env
-      pp_name mem.mem_name
-      pp_num mem.mem_min
-  | Some max ->
-    fprintf fmt {|(import "%a" "%a" (memory %a %a))|}
-      pp_name mem.mem_env
-      pp_name mem.mem_name
-      pp_num mem.mem_min
-      pp_num max
-
-let pp_mems (fmt : formatter) (mems : mem list) : unit =
-  pp_print_list ~pp_sep:pp_sep_double_space pp_mem fmt mems
 
 (* -------------------------------------------------------------------- *)
 
@@ -283,6 +280,25 @@ let pp_funcs (fmt : formatter) (funcs : func list) : unit =
 
 (* -------------------------------------------------------------------- *)
 
+let pp_mem (fmt : formatter) (mem : mem) : unit =
+  match mem.mem_max with
+  | None ->
+    fprintf fmt {|(import "%a" "%a" (memory %a))|}
+      pp_name mem.mem_env
+      pp_name mem.mem_name
+      pp_num mem.mem_min
+  | Some max ->
+    fprintf fmt {|(import "%a" "%a" (memory %a %a))|}
+      pp_name mem.mem_env
+      pp_name mem.mem_name
+      pp_num mem.mem_min
+      pp_num max
+
+let pp_mems (fmt : formatter) (mems : mem list) : unit =
+  pp_print_list ~pp_sep:pp_sep_double_space pp_mem fmt mems
+
+(* -------------------------------------------------------------------- *)
+
 let pp_arg (fmt : formatter) (arg : ty) : unit =
   fprintf fmt "(param %a)" pp_ty arg
 
@@ -294,15 +310,43 @@ let pp_args (fmt : formatter) (args : ty list) : unit =
 (* -------------------------------------------------------------------- *)
 
 let pp_import (fmt : formatter) (import : import) : unit =
-  fprintf fmt {|(import "%a" "%a" (func $%a%a%a))|}
+  fprintf fmt {|@[<hov 2>(import "%a" "%a"@ @[<hov 1>(func $%a|}
     pp_name import.import_env
     pp_funname import.import_name
-    pp_funname import.import_name
-    pp_args import.import_args
-    pp_result import.import_result
+    pp_funname import.import_name;
+
+  if import.import_args <> [] then
+    fprintf fmt "@ %a" pp_args import.import_args;
+
+  if import.import_result <> [] then
+    fprintf fmt "@ %a" pp_result import.import_result;
+
+  fprintf fmt ")@])@]"
 
 let pp_imports (fmt : formatter) (imports : import list) : unit =
   pp_print_list ~pp_sep:pp_sep_double_space pp_import fmt imports
+
+(* -------------------------------------------------------------------- *)
+
+let pp_byte (fmt : formatter) (byte : num) : unit =
+  fprintf fmt "\\%a" pp_num_as_byte byte
+
+let pp_bytes (fmt : formatter) (bytes : num list) : unit =
+  List.iter (pp_byte fmt) bytes
+
+(* -------------------------------------------------------------------- *)
+
+let pp_data (fmt : formatter) ({ data_ofs; data_bytes } : data) : unit =
+  match data_bytes with
+  | [] -> ()
+  | bytes ->
+    let chunks = group_by 16 bytes in
+    fprintf fmt "@[<v 2>(data (i32.const %a)" pp_num data_ofs;
+    List.iter (fun chunk -> fprintf fmt {|@ "%a"|} pp_bytes chunk) chunks;
+    fprintf fmt "@]@\n)"
+
+let pp_datas (fmt : formatter) (datas : data list) : unit =
+  pp_print_list ~pp_sep:pp_sep_double_space pp_data fmt datas
 
 (* -------------------------------------------------------------------- *)
 
@@ -332,24 +376,29 @@ let pp_start (fmt : formatter) (funname : funname option) : unit =
 (* -------------------------------------------------------------------- *)
 
 let pp_module (fmt : formatter) (wasm_mod : wasm_module) : unit =
-  fprintf fmt "@[<v 2>(module";
+  let { mod_name; mod_mems; mod_imports; mod_datas; mod_funcs; mod_init; mod_exports; mod_start } = wasm_mod in
 
-  if wasm_mod.mod_mems <> [] then
-    fprintf fmt "@\n@ %a" pp_mems wasm_mod.mod_mems;
+  fprintf fmt "@[<v 2>(module $%a" pp_name mod_name;
 
-  if wasm_mod.mod_imports <> [] then
-    fprintf fmt "@\n@ %a" pp_imports wasm_mod.mod_imports;
+  if mod_mems <> [] then
+    fprintf fmt "@\n@ %a" pp_mems mod_mems;
 
-  if wasm_mod.mod_funcs <> [] then
-    fprintf fmt "@\n@ %a" pp_funcs wasm_mod.mod_funcs;
+  if mod_imports <> [] then
+    fprintf fmt "@\n@ %a" pp_imports mod_imports;
 
-  if wasm_mod.mod_init <> None then
-    fprintf fmt "@\n@ %a" pp_init wasm_mod.mod_init;
+  if mod_datas <> [] then
+    fprintf fmt "@\n@ %a" pp_datas mod_datas;
 
-  if wasm_mod.mod_exports <> [] then
-    fprintf fmt "@\n@ %a" pp_exports wasm_mod.mod_exports;
+  if mod_funcs <> [] then
+    fprintf fmt "@\n@ %a" pp_funcs mod_funcs;
 
-  if wasm_mod.mod_start <> None then
-    fprintf fmt "@\n@ %a" pp_start wasm_mod.mod_start;
+  if mod_init <> None then
+    fprintf fmt "@\n@ %a" pp_init mod_init;
+
+  if mod_exports <> [] then
+    fprintf fmt "@\n@ %a" pp_exports mod_exports;
+
+  if mod_start <> None then
+    fprintf fmt "@\n@ %a" pp_start mod_start;
 
   fprintf fmt "@]@\n@\n)"

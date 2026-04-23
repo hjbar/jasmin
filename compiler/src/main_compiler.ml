@@ -207,7 +207,9 @@ let main () =
         let e = Conv.error_of_cerror (Printer.pp_err ~debug:!debug) e in
         raise (HiError e)
       | Utils0.Ok asm ->
-        let prog = Compile_wasm.compiler_back_end asm in
+        let mod_name = Filename.remove_extension !outfile in
+        let mod_name = if String.is_empty mod_name then "jasmin" else mod_name in
+        let prog = Compile_wasm.compiler_back_end ~mod_name asm in
 
         if !outfile <> "" then begin
           BatFile.with_file_out !outfile (fun out ->
