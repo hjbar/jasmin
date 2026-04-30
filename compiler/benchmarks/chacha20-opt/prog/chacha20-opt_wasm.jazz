@@ -1,0 +1,11 @@
+param int CHACHA_ROUNDS=20;
+
+require "chacha-opt_wasm.jinc"
+
+export fn jade_stream_chacha_chacha20_amd64_ref(reg u32 stream stream_length nonce key) -> reg u32
+{
+  reg u32 r;
+  __chacha_ref(stream, stream_length, nonce, key);
+  r = 0;
+  return r;
+}

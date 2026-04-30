@@ -1,0 +1,4 @@
+require "chacha_state_wasm.jinc"
+require "chacha_store_wasm.jinc"
+require "chacha_core_wasm.jinc"
+require "chacha_entry_wasm.jinc"

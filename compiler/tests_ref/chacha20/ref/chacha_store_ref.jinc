@@ -298,5 +298,3 @@ inline fn __store_last_ref(stack u64 s_output s_len, reg u32[16] k, stack u32 k1
     j += 1;
   }
 }
-
-

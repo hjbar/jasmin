@@ -18,6 +18,8 @@ let rec group_by n =
 
 let is_visible = function Return [] -> false | _ -> true
 
+let pp_sep_simple_space fmt () = fprintf fmt " "
+
 let pp_sep_double_space fmt () = fprintf fmt "@ @ "
 
 (* -------------------------------------------------------------------- *)
@@ -42,7 +44,7 @@ let pp_num (fmt : formatter) (num : num) : unit =
   Z.pp_print fmt num
 
 let pp_nums (fmt : formatter) (nums : num list) : unit =
-  pp_print_list ~pp_sep:pp_print_space pp_num fmt nums
+  pp_print_list ~pp_sep:pp_sep_simple_space pp_num fmt nums
 
 let pp_var (fmt : formatter) (var : var) : unit =
   fprintf fmt "%a.%s" pp_name var.var_name (CoreIdent.string_of_uid var.var_uid)
@@ -110,11 +112,17 @@ let pp_unop (fmt : formatter) (unop : unop) : unit =
   | Extend sign -> fprintf fmt "i64.extend_i32_%a" pp_sign sign
   | Wrap -> fprintf fmt "i32.wrap_i64"
   | Not -> fprintf fmt "v128.not"
-  | Extract ((Simd (I32x4 | I64x2) as ty), num) ->
+  | Splat simd -> fprintf fmt "%a.splat" pp_ty simd
+  | Extract_lane ((Simd (I32x4 | I64x2) as simd), None, num) ->
     fprintf fmt "%a.extract_lane %a"
-      pp_ty ty
+      pp_ty simd
       pp_num num
-  | Extract _ -> failwith "Instruction not well-formed"
+  | Extract_lane ((Simd (I8x16 | I16x8) as simd), Some sign, num) ->
+    fprintf fmt "%a.extract_lane_%a %a"
+      pp_ty simd
+      pp_sign sign
+      pp_num num
+  | Extract_lane _ -> failwith "Instruction not well-formed"
 
 let pp_binop (fmt : formatter) (binop : binop) : unit =
   match binop with
@@ -158,6 +166,11 @@ let pp_binop (fmt : formatter) (binop : binop) : unit =
       pp_ty ty
       pp_sign sign
   | Swizzle -> fprintf fmt "i8x16.swizzle"
+  | Shuffle nums -> fprintf fmt "i8x16.shuffle %a" pp_nums nums
+  | Replace_lane (simd, num) ->
+    fprintf fmt "%a.replace_lane %a"
+      pp_ty simd
+      pp_num num
 
 let rec pp_instr (fmt : formatter) (instr : instr) : unit =
   match instr with

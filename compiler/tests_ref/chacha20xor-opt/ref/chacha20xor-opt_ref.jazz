@@ -1,0 +1,16 @@
+param int CHACHA_ROUNDS=20;
+
+require "chacha-opt_ref.jinc"
+
+export fn jade_stream_chacha_chacha20_amd64_ref_xor(reg u64 output input input_length nonce key) -> reg u64
+{
+  reg u64 r;
+  __chacha_xor_ref(output, input, input_length, nonce, key);
+  ?{}, r = #set0();
+  return r;
+}
+
+export fn main_test(reg u64 output input input_length nonce key) -> reg u64 {
+  reg u64 x = jade_stream_chacha_chacha20_amd64_ref_xor(output, input, input_length, nonce, key);
+  return x;
+}

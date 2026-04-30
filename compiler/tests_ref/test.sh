@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 # Parse command line
 VERBOSE=false
 CLEAN=false
@@ -25,6 +26,7 @@ done
 
 shift $((OPTIND - 1))
 
+
 # Globals
 ROOT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 PARENT_DIR=$(dirname "$ROOT_DIR")
@@ -32,12 +34,30 @@ PARENT_DIR=$(dirname "$ROOT_DIR")
 COMPILER="$PARENT_DIR/jasminc"
 
 GIMLI="$ROOT_DIR/gimli"
+
 SHA256="$ROOT_DIR/sha256"
+SHA256_OPT="$ROOT_DIR/sha256-opt"
+
 CHACHA20="$ROOT_DIR/chacha20"
+CHACHA20_OPT="$ROOT_DIR/chacha20-opt"
+
+CHACHA20AVX="$ROOT_DIR/chacha20avx"
+CHACHA20AVX_OPT="$ROOT_DIR/chacha20avx-opt"
+
 CHACHA20XOR="$ROOT_DIR/chacha20xor"
+CHACHA20XOR_OPT="$ROOT_DIR/chacha20xor-opt"
+
+CHACHA20XORAVX="$ROOT_DIR/chacha20xoravx"
+CHACHA20XORAVX_OPT="$ROOT_DIR/chacha20xoravx-opt"
 
 FILES_32=("$GIMLI")
-FILES_64=("$SHA256" "$CHACHA20" "$CHACHA20XOR")
+FILES_64=(
+  "$SHA256"         "$SHA256_OPT"
+  "$CHACHA20"       "$CHACHA20_OPT"
+  "$CHACHA20AVX"    "$CHACHA20AVX_OPT"
+  "$CHACHA20XOR"    "$CHACHA20XOR_OPT"
+  "$CHACHA20XORAVX" "$CHACHA20XORAVX_OPT"
+)
 FILES_ALL=("${FILES_32[@]}" "${FILES_64[@]}")
 
 NC='\033[0m'
@@ -47,7 +67,8 @@ GREEN='\033[0;32m'
 SEP="=========================================================================================="
 sep="------------------------------------------------------------------------------------------"
 
-# Run the tests
+
+# Test function
 run_tests() {
   local FILES="$1"
   local SIZE="$2"
@@ -184,10 +205,18 @@ run_tests() {
   done
 }
 
+
+# Generate a random hexa string
+generate_string() {
+  openssl rand -hex "$1"
+}
+
+
 # Build Jasminc compiler
 echo "Build..."
 make -C "$PARENT_DIR"
 clear
+
 
 # Run the tests
 
@@ -195,11 +224,17 @@ clear
 VALUES=(0 1 10 42 100 -1 -10 -42 -100)
 run_tests "$GIMLI" 32 1 "${VALUES[@]}"
 
+
 # SHA256
-len=1000
-eval printf -v str '%.1s' "{a..z}{1..$len}"
-VALUES=("0" "abc" "Hello World!" "foo bar gee" "$str")
+V_001=$(printf '%.1s' {a..z}{1..32})
+V_002=$(printf '%.1s' {a..z}{1..64})
+V_003=$(printf '%.1s' {a..z}{1..128})
+V_004=$(printf '%.1s' {a..z}{1..256})
+V_005=$(printf '%.1s' {a..z}{1..2048})
+VALUES=("0" "abc" "Hello World!" "foo bar gee" "$V_001" "$V_002" "$V_003" "$V_004" "$V_005")
 run_tests "$SHA256" 64 1 "${VALUES[@]}"
+run_tests "$SHA256_OPT" 64 1 "${VALUES[@]}"
+
 
 # CHACHA20
 K_ZER="0000000000000000000000000000000000000000000000000000000000000000"
@@ -211,66 +246,88 @@ N_FFF="ffffffffffffffffffffffff"
 N_RFC="070000004041424344454647"
 
 VALUES=(
-# [LEN] [KEY]    [NONCE]
-  "0"   "$K_ZER" "$N_ZER"
-  "1"   "$K_ZER" "$N_ZER"
-  "64"  "$K_ZER" "$N_ZER"
-  "65"  "$K_ZER" "$N_ZER"
-  "128" "$K_ZER" "$N_ZER"
+# [LEN]  [KEY]    [NONCE]
+  "0"    "$K_ZER" "$N_ZER"
+  "1"    "$K_ZER" "$N_ZER"
+  "64"   "$K_ZER" "$N_ZER"
+  "65"   "$K_ZER" "$N_ZER"
+  "128"  "$K_ZER" "$N_ZER"
+  "256"  "$K_ZER" "$N_ZER"
+  "2048" "$K_ZER" "$N_ZER"
 
-  "0"   "$K_ZER" "$N_FFF"
-  "1"   "$K_ZER" "$N_FFF"
-  "64"  "$K_ZER" "$N_FFF"
-  "65"  "$K_ZER" "$N_FFF"
-  "128" "$K_ZER" "$N_FFF"
+  "0"    "$K_ZER" "$N_FFF"
+  "1"    "$K_ZER" "$N_FFF"
+  "64"   "$K_ZER" "$N_FFF"
+  "65"   "$K_ZER" "$N_FFF"
+  "128"  "$K_ZER" "$N_FFF"
+  "256"  "$K_ZER" "$N_FFF"
+  "2048" "$K_ZER" "$N_FFF"
 
-  "0"   "$K_ZER" "$N_RFC"
-  "1"   "$K_ZER" "$N_RFC"
-  "64"  "$K_ZER" "$N_RFC"
-  "65"  "$K_ZER" "$N_RFC"
-  "128" "$K_ZER" "$N_RFC"
-
-
-  "0"   "$K_SEQ" "$N_ZER"
-  "1"   "$K_SEQ" "$N_ZER"
-  "64"  "$K_SEQ" "$N_ZER"
-  "65"  "$K_SEQ" "$N_ZER"
-  "128" "$K_SEQ" "$N_ZER"
-
-  "0"   "$K_SEQ" "$N_FFF"
-  "1"   "$K_SEQ" "$N_FFF"
-  "64"  "$K_SEQ" "$N_FFF"
-  "65"  "$K_SEQ" "$N_FFF"
-  "128" "$K_SEQ" "$N_FFF"
-
-  "0"   "$K_SEQ" "$N_RFC"
-  "1"   "$K_SEQ" "$N_RFC"
-  "64"  "$K_SEQ" "$N_RFC"
-  "65"  "$K_SEQ" "$N_RFC"
-  "128" "$K_SEQ" "$N_RFC"
+  "0"    "$K_ZER" "$N_RFC"
+  "1"    "$K_ZER" "$N_RFC"
+  "64"   "$K_ZER" "$N_RFC"
+  "65"   "$K_ZER" "$N_RFC"
+  "128"  "$K_ZER" "$N_RFC"
+  "256"  "$K_ZER" "$N_RFC"
+  "2048" "$K_ZER" "$N_RFC"
 
 
-  "0"   "$K_RFC" "$N_ZER"
-  "1"   "$K_RFC" "$N_ZER"
-  "64"  "$K_RFC" "$N_ZER"
-  "65"  "$K_RFC" "$N_ZER"
-  "128" "$K_RFC" "$N_ZER"
+  "0"    "$K_SEQ" "$N_ZER"
+  "1"    "$K_SEQ" "$N_ZER"
+  "64"   "$K_SEQ" "$N_ZER"
+  "65"   "$K_SEQ" "$N_ZER"
+  "128"  "$K_SEQ" "$N_ZER"
+  "256"  "$K_SEQ" "$N_ZER"
+  "2048" "$K_SEQ" "$N_ZER"
 
-  "0"   "$K_RFC" "$N_FFF"
-  "1"   "$K_RFC" "$N_FFF"
-  "64"  "$K_RFC" "$N_FFF"
-  "65"  "$K_RFC" "$N_FFF"
-  "128" "$K_RFC" "$N_FFF"
+  "0"    "$K_SEQ" "$N_FFF"
+  "1"    "$K_SEQ" "$N_FFF"
+  "64"   "$K_SEQ" "$N_FFF"
+  "65"   "$K_SEQ" "$N_FFF"
+  "128"  "$K_SEQ" "$N_FFF"
+  "256"  "$K_SEQ" "$N_FFF"
+  "2048" "$K_SEQ" "$N_FFF"
 
-  "0"   "$K_RFC" "$N_RFC"
-  "1"   "$K_RFC" "$N_RFC"
-  "64"  "$K_RFC" "$N_RFC"
-  "65"  "$K_RFC" "$N_RFC"
-  "128" "$K_RFC" "$N_RFC"
+  "0"    "$K_SEQ" "$N_RFC"
+  "1"    "$K_SEQ" "$N_RFC"
+  "64"   "$K_SEQ" "$N_RFC"
+  "65"   "$K_SEQ" "$N_RFC"
+  "128"  "$K_SEQ" "$N_RFC"
+  "256"  "$K_SEQ" "$N_RFC"
+  "2048" "$K_SEQ" "$N_RFC"
+
+
+  "0"    "$K_RFC" "$N_ZER"
+  "1"    "$K_RFC" "$N_ZER"
+  "64"   "$K_RFC" "$N_ZER"
+  "65"   "$K_RFC" "$N_ZER"
+  "128"  "$K_RFC" "$N_ZER"
+  "256"  "$K_RFC" "$N_ZER"
+  "2048" "$K_RFC" "$N_ZER"
+
+  "0"    "$K_RFC" "$N_FFF"
+  "1"    "$K_RFC" "$N_FFF"
+  "64"   "$K_RFC" "$N_FFF"
+  "65"   "$K_RFC" "$N_FFF"
+  "128"  "$K_RFC" "$N_FFF"
+  "256"  "$K_RFC" "$N_FFF"
+  "2048" "$K_RFC" "$N_FFF"
+
+  "0"    "$K_RFC" "$N_RFC"
+  "1"    "$K_RFC" "$N_RFC"
+  "64"   "$K_RFC" "$N_RFC"
+  "65"   "$K_RFC" "$N_RFC"
+  "128"  "$K_RFC" "$N_RFC"
+  "256"  "$K_RFC" "$N_RFC"
+  "2048" "$K_RFC" "$N_RFC"
 )
 run_tests "$CHACHA20" 64 3 "${VALUES[@]}"
+run_tests "$CHACHA20_OPT" 64 3 "${VALUES[@]}"
+run_tests "$CHACHA20AVX" 64 3 "${VALUES[@]}"
+run_tests "$CHACHA20AVX_OPT" 64 3 "${VALUES[@]}"
 
-# CHACHA20XOR
+
+# CHACHA20 XOR
 M_000="" #0
 M_001="00" #1
 M_002="ff" #1
@@ -278,6 +335,8 @@ M_003="48656c6c6f20576f726c6421" #12
 M_004=$(printf '61%.0s' {1..64}) #64
 M_005=$(printf '61%.0s' {1..65}) #65
 M_006=$(printf '61%.0s' {1..128}) #128
+M_007=$(generate_string 256) #256
+M_008=$(generate_string 2048) #2048
 
 K_ZER="0000000000000000000000000000000000000000000000000000000000000000"
 K_SEQ="000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
@@ -288,81 +347,104 @@ N_FFF="ffffffffffffffffffffffff"
 N_RFC="070000004041424344454647"
 
 VALUES=(
-# [LEN] [INPUT]  [KEY]    [NONCE]
-  "0"   "$M_000" "$K_ZER" "$N_ZER"
-  "1"   "$M_001" "$K_ZER" "$N_ZER"
-  "1"   "$M_002" "$K_ZER" "$N_ZER"
-  "12"  "$M_003" "$K_ZER" "$N_ZER"
-  "64"  "$M_004" "$K_ZER" "$N_ZER"
-  "65"  "$M_005" "$K_ZER" "$N_ZER"
-  "128" "$M_006" "$K_ZER" "$N_ZER"
+# [LEN]  [INPUT]  [KEY]    [NONCE]
+  "0"    "$M_000" "$K_ZER" "$N_ZER"
+  "1"    "$M_001" "$K_ZER" "$N_ZER"
+  "1"    "$M_002" "$K_ZER" "$N_ZER"
+  "12"   "$M_003" "$K_ZER" "$N_ZER"
+  "64"   "$M_004" "$K_ZER" "$N_ZER"
+  "65"   "$M_005" "$K_ZER" "$N_ZER"
+  "128"  "$M_006" "$K_ZER" "$N_ZER"
+  "256"  "$M_007" "$K_ZER" "$N_ZER"
+  "2048" "$M_008" "$K_ZER" "$N_ZER"
 
-  "0"   "$M_000" "$K_ZER" "$N_FFF"
-  "1"   "$M_001" "$K_ZER" "$N_FFF"
-  "1"   "$M_002" "$K_ZER" "$N_FFF"
-  "12"  "$M_003" "$K_ZER" "$N_FFF"
-  "64"  "$M_004" "$K_ZER" "$N_FFF"
-  "65"  "$M_005" "$K_ZER" "$N_FFF"
-  "128" "$M_006" "$K_ZER" "$N_FFF"
+  "0"    "$M_000" "$K_ZER" "$N_FFF"
+  "1"    "$M_001" "$K_ZER" "$N_FFF"
+  "1"    "$M_002" "$K_ZER" "$N_FFF"
+  "12"   "$M_003" "$K_ZER" "$N_FFF"
+  "64"   "$M_004" "$K_ZER" "$N_FFF"
+  "65"   "$M_005" "$K_ZER" "$N_FFF"
+  "128"  "$M_006" "$K_ZER" "$N_FFF"
+  "256"  "$M_007" "$K_ZER" "$N_FFF"
+  "2048" "$M_008" "$K_ZER" "$N_FFF"
 
-  "0"   "$M_000" "$K_ZER" "$N_RFC"
-  "1"   "$M_001" "$K_ZER" "$N_RFC"
-  "1"   "$M_002" "$K_ZER" "$N_RFC"
-  "12"  "$M_003" "$K_ZER" "$N_RFC"
-  "64"  "$M_004" "$K_ZER" "$N_RFC"
-  "65"  "$M_005" "$K_ZER" "$N_RFC"
-  "128" "$M_006" "$K_ZER" "$N_RFC"
+  "0"    "$M_000" "$K_ZER" "$N_RFC"
+  "1"    "$M_001" "$K_ZER" "$N_RFC"
+  "1"    "$M_002" "$K_ZER" "$N_RFC"
+  "12"   "$M_003" "$K_ZER" "$N_RFC"
+  "64"   "$M_004" "$K_ZER" "$N_RFC"
+  "65"   "$M_005" "$K_ZER" "$N_RFC"
+  "128"  "$M_006" "$K_ZER" "$N_RFC"
+  "256"  "$M_007" "$K_ZER" "$N_RFC"
+  "2048" "$M_008" "$K_ZER" "$N_RFC"
 
 
-  "0"   "$M_000" "$K_SEQ" "$N_ZER"
-  "1"   "$M_001" "$K_SEQ" "$N_ZER"
-  "1"   "$M_002" "$K_SEQ" "$N_ZER"
-  "12"  "$M_003" "$K_SEQ" "$N_ZER"
-  "64"  "$M_004" "$K_SEQ" "$N_ZER"
-  "65"  "$M_005" "$K_SEQ" "$N_ZER"
-  "128" "$M_006" "$K_SEQ" "$N_ZER"
+  "0"    "$M_000" "$K_SEQ" "$N_ZER"
+  "1"    "$M_001" "$K_SEQ" "$N_ZER"
+  "1"    "$M_002" "$K_SEQ" "$N_ZER"
+  "12"   "$M_003" "$K_SEQ" "$N_ZER"
+  "64"   "$M_004" "$K_SEQ" "$N_ZER"
+  "65"   "$M_005" "$K_SEQ" "$N_ZER"
+  "128"  "$M_006" "$K_SEQ" "$N_ZER"
+  "256"  "$M_007" "$K_SEQ" "$N_ZER"
+  "2048" "$M_008" "$K_SEQ" "$N_ZER"
 
-  "0"   "$M_000" "$K_SEQ" "$N_FFF"
-  "1"   "$M_001" "$K_SEQ" "$N_FFF"
-  "1"   "$M_002" "$K_SEQ" "$N_FFF"
-  "12"  "$M_003" "$K_SEQ" "$N_FFF"
-  "64"  "$M_004" "$K_SEQ" "$N_FFF"
-  "65"  "$M_005" "$K_SEQ" "$N_FFF"
-  "128" "$M_006" "$K_SEQ" "$N_FFF"
+  "0"    "$M_000" "$K_SEQ" "$N_FFF"
+  "1"    "$M_001" "$K_SEQ" "$N_FFF"
+  "1"    "$M_002" "$K_SEQ" "$N_FFF"
+  "12"   "$M_003" "$K_SEQ" "$N_FFF"
+  "64"   "$M_004" "$K_SEQ" "$N_FFF"
+  "65"   "$M_005" "$K_SEQ" "$N_FFF"
+  "128"  "$M_006" "$K_SEQ" "$N_FFF"
+  "256"  "$M_007" "$K_SEQ" "$N_FFF"
+  "2048" "$M_008" "$K_SEQ" "$N_FFF"
 
-  "0"   "$M_000" "$K_SEQ" "$N_RFC"
-  "1"   "$M_001" "$K_SEQ" "$N_RFC"
-  "1"   "$M_002" "$K_SEQ" "$N_RFC"
-  "12"  "$M_003" "$K_SEQ" "$N_RFC"
-  "64"  "$M_004" "$K_SEQ" "$N_RFC"
-  "65"  "$M_005" "$K_SEQ" "$N_RFC"
-  "128" "$M_006" "$K_SEQ" "$N_RFC"
+  "0"    "$M_000" "$K_SEQ" "$N_RFC"
+  "1"    "$M_001" "$K_SEQ" "$N_RFC"
+  "1"    "$M_002" "$K_SEQ" "$N_RFC"
+  "12"   "$M_003" "$K_SEQ" "$N_RFC"
+  "64"   "$M_004" "$K_SEQ" "$N_RFC"
+  "65"   "$M_005" "$K_SEQ" "$N_RFC"
+  "128"  "$M_006" "$K_SEQ" "$N_RFC"
+  "256"  "$M_007" "$K_SEQ" "$N_RFC"
+  "2048" "$M_008" "$K_SEQ" "$N_RFC"
 
-  "0"   "$M_000" "$K_RFC" "$N_ZER"
-  "1"   "$M_001" "$K_RFC" "$N_ZER"
-  "1"   "$M_002" "$K_RFC" "$N_ZER"
-  "12"  "$M_003" "$K_RFC" "$N_ZER"
-  "64"  "$M_004" "$K_RFC" "$N_ZER"
-  "65"  "$M_005" "$K_RFC" "$N_ZER"
-  "128" "$M_006" "$K_RFC" "$N_ZER"
 
-  "0"   "$M_000" "$K_RFC" "$N_FFF"
-  "1"   "$M_001" "$K_RFC" "$N_FFF"
-  "1"   "$M_002" "$K_RFC" "$N_FFF"
-  "12"  "$M_003" "$K_RFC" "$N_FFF"
-  "64"  "$M_004" "$K_RFC" "$N_FFF"
-  "65"  "$M_005" "$K_RFC" "$N_FFF"
-  "128" "$M_006" "$K_RFC" "$N_FFF"
+  "0"    "$M_000" "$K_RFC" "$N_ZER"
+  "1"    "$M_001" "$K_RFC" "$N_ZER"
+  "1"    "$M_002" "$K_RFC" "$N_ZER"
+  "12"   "$M_003" "$K_RFC" "$N_ZER"
+  "64"   "$M_004" "$K_RFC" "$N_ZER"
+  "65"   "$M_005" "$K_RFC" "$N_ZER"
+  "128"  "$M_006" "$K_RFC" "$N_ZER"
+  "256"  "$M_007" "$K_RFC" "$N_ZER"
+  "2048" "$M_008" "$K_RFC" "$N_ZER"
 
-  "0"   "$M_000" "$K_RFC" "$N_RFC"
-  "1"   "$M_001" "$K_RFC" "$N_RFC"
-  "1"   "$M_002" "$K_RFC" "$N_RFC"
-  "12"  "$M_003" "$K_RFC" "$N_RFC"
-  "64"  "$M_004" "$K_RFC" "$N_RFC"
-  "65"  "$M_005" "$K_RFC" "$N_RFC"
-  "128" "$M_006" "$K_RFC" "$N_RFC"
+  "0"    "$M_000" "$K_RFC" "$N_FFF"
+  "1"    "$M_001" "$K_RFC" "$N_FFF"
+  "1"    "$M_002" "$K_RFC" "$N_FFF"
+  "12"   "$M_003" "$K_RFC" "$N_FFF"
+  "64"   "$M_004" "$K_RFC" "$N_FFF"
+  "65"   "$M_005" "$K_RFC" "$N_FFF"
+  "128"  "$M_006" "$K_RFC" "$N_FFF"
+  "256"  "$M_007" "$K_RFC" "$N_FFF"
+  "2048" "$M_008" "$K_RFC" "$N_FFF"
+
+  "0"    "$M_000" "$K_RFC" "$N_RFC"
+  "1"    "$M_001" "$K_RFC" "$N_RFC"
+  "1"    "$M_002" "$K_RFC" "$N_RFC"
+  "12"   "$M_003" "$K_RFC" "$N_RFC"
+  "64"   "$M_004" "$K_RFC" "$N_RFC"
+  "65"   "$M_005" "$K_RFC" "$N_RFC"
+  "128"  "$M_006" "$K_RFC" "$N_RFC"
+  "256"  "$M_007" "$K_RFC" "$N_RFC"
+  "2048" "$M_008" "$K_RFC" "$N_RFC"
 )
 run_tests "$CHACHA20XOR" 64 4 "${VALUES[@]}"
+run_tests "$CHACHA20XOR_OPT" 64 4 "${VALUES[@]}"
+run_tests "$CHACHA20XORAVX" 64 4 "${VALUES[@]}"
+run_tests "$CHACHA20XORAVX_OPT" 64 4 "${VALUES[@]}"
+
 
 # Remove build files
 if [ "$CLEAN" = true ]; then

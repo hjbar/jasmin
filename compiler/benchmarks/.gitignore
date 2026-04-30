@@ -1,0 +1,6 @@
+*log*
+*.s
+*.o
+*.exe
+*.wat
+*.wasm

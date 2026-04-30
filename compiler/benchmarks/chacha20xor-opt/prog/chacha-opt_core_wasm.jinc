@@ -1,0 +1,189 @@
+
+// the following implementation requires:
+// - (even) param int CHACHA_ROUNDS;
+// - inline fn __init_ref(reg u64 nonce key) -> stack u32[16] (check chacha_state.jinc)
+// - inline fn __increment_counter_ref(stack u32[16] state) -> stack u32[16] (check chacha_state.jinc)
+
+// used;
+inline fn __copy_state_ref(reg u32[16] st) -> reg u32[16]
+{
+  inline int i;
+  reg u32[16] k;
+
+  for i=0 to 16
+  { k[i] = st[i]; }
+
+  return k;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+// not exported; may be useful as spec;
+inline fn __line_ref(reg u32[16] k, inline int a b c r) -> reg u32[16]
+{
+  k[a] += k[b];
+  k[c] ^= k[a];
+  k[c] <<r= r;
+  return k;
+}
+
+// not exported; may be useful as spec;
+inline fn __quarter_round_ref(reg u32[16] k, inline int a b c d) -> reg u32[16]
+{
+  k = __line_ref(k, a, b, d, 16);
+  k = __line_ref(k, c, d, b, 12);
+  k = __line_ref(k, a, b, d, 8);
+  k = __line_ref(k, c, d, b, 7);
+  return k;
+}
+
+// not exported; may be useful as spec;
+inline fn __column_round_ref(reg u32[16] k) -> reg u32[16]
+{
+  k = __quarter_round_ref(k, 0, 4,  8, 12);
+  k = __quarter_round_ref(k, 1, 5,  9, 13);
+  k = __quarter_round_ref(k, 2, 6, 10, 14);
+  k = __quarter_round_ref(k, 3, 7, 11, 15);
+
+  return k;
+}
+
+// not exported; may be useful as spec;
+inline fn __diagonal_round_ref(reg u32[16] k) -> reg u32[16]
+{
+  k = __quarter_round_ref(k, 0, 5, 10, 15);
+  k = __quarter_round_ref(k, 1, 6, 11, 12);
+  k = __quarter_round_ref(k, 2, 7, 8,  13);
+  k = __quarter_round_ref(k, 3, 4, 9,  14);
+
+  return k;
+}
+
+// not exported; may be useful as spec;
+inline fn __double_round_ref(reg u32[16] k) -> reg u32[16]
+{
+  k = __column_round_ref(k);
+  k = __diagonal_round_ref(k);
+  return k;
+}
+
+// not exported; may be useful as spec;
+inline fn __rounds_ref(reg u32[16] k) -> reg u32[16]
+{
+  reg u32 c;
+
+  c = (CHACHA_ROUNDS/2);
+  while
+  {
+    k = __double_round_ref(k);
+    c -= 1;
+  } (c > 0)
+
+  return k;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+// used; performs two quarter rounds, inlined 'line's;
+inline fn __half_round_inline_ref(
+  reg u32[16] k,
+  inline int a0 b0 c0 d0
+             a1 b1 c1 d1
+) -> reg u32[16]
+{
+
+  //k = line(k, a, b, d, 16);
+  k[a0] += k[b0];
+  k[a1] += k[b1];
+
+  k[d0] ^= k[a0];
+  k[d1] ^= k[a1];
+
+  k[d0] <<r= 16;
+  k[d1] <<r= 16;
+
+  //k = line(k, c, d, b, 12);
+  k[c0] += k[d0];
+  k[c1] += k[d1];
+
+  k[b0] ^= k[c0];
+  k[b1] ^= k[c1];
+
+  k[b0] <<r= 12;
+  k[b1] <<r= 12;
+
+  //k = line(k, a, b, d, 8);
+  k[a0] += k[b0];
+  k[a1] += k[b1];
+
+  k[d0] ^= k[a0];
+  k[d1] ^= k[a1];
+
+  k[d0] <<r= 8;
+  k[d1] <<r= 8;
+
+  //k = line(k, c, d, b, 7);
+  k[c0] += k[d0];
+  k[c1] += k[d1];
+
+  k[b0] ^= k[c0];
+  k[b1] ^= k[c1];
+
+  k[b0] <<r= 7;
+  k[b1] <<r= 7;
+
+  return k;
+}
+
+
+// used;
+inline fn __double_round_inline_ref(reg u32[16] k) -> reg u32[16]
+{
+  k = __half_round_inline_ref(k, 0, 4, 8, 12,
+                                 2, 6, 10, 14);
+
+  k = __half_round_inline_ref(k, 1, 5, 9, 13,
+                                 3, 7, 11, 15);
+
+  k = __half_round_inline_ref(k, 1, 6, 11, 12,
+                                 0, 5, 10, 15);
+
+
+  k = __half_round_inline_ref(k, 2, 7, 8, 13,
+                                 3, 4, 9, 14);
+
+  return k;
+}
+
+
+// used;
+inline fn __rounds_inline_ref(reg u32[16] k) -> reg u32[16]
+{
+  reg u32 c;
+
+  c = (CHACHA_ROUNDS/2);
+
+  while
+  { k = __double_round_inline_ref(k);
+
+    c -= 1;
+  } (c > 0)
+
+  return k;
+}
+
+
+// used;
+inline fn __sum_states_ref(reg u32[16] k, reg u32[16] st) -> reg u32[16]
+{
+  inline int i;
+
+  for i=0 to 16
+  { k[i] += st[i]; }
+
+  return k;
+}

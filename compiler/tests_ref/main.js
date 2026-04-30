@@ -23,13 +23,48 @@ function parseInputs() {
 
   const args = rawValues.map(val => {
 
+    // Special case for SHA256-OPT
+    if (rawPath.includes('sha256-opt')) {
+      return val;
+    }
+
     // Special case for SHA256
     if (rawPath.includes('sha256')) {
       return val;
     }
 
+    // Special case for CHACHA20XORAVX-OPT
+    if (rawPath.includes('chacha20xoravx-opt')) {
+      return val;
+    }
+
+    // Special case for CHACHA20XORAVX
+    if (rawPath.includes('chacha20xoravx')) {
+      return val;
+    }
+
+    // Special case for CHACHA20AVX-OPT
+    if (rawPath.includes('chacha20avx-opt')) {
+      return val;
+    }
+
+    // Special case for CHACHA20AVX
+    if (rawPath.includes('chacha20avx')) {
+      return val;
+    }
+
+    // Special case for CHACHA20XOR-OPT
+    if (rawPath.includes('chacha20xor-opt')) {
+      return val;
+    }
+
     // Special case for CHACHA20XOR
     if (rawPath.includes('chacha20xor')) {
+      return val;
+    }
+
+    // Special case for CHACHA20-OPT
+    if (rawPath.includes('chacha20-opt')) {
       return val;
     }
 
@@ -105,6 +140,32 @@ async function runWasm(path, size, args) {
 
     const { instance } = await WebAssembly.instantiate(wasmBuffer, importObject);
 
+    // Special case for SHA256-OPT
+    if (path.includes('sha256-opt')) {
+      const inputArg = process.argv[5];
+      let bufferToHash;
+
+      if (!isNaN(inputArg) && inputArg.trim() !== "") {
+        bufferToHash = new Uint8Array(Number(inputArg));
+      } else {
+        bufferToHash = new TextEncoder().encode(inputArg);
+      }
+
+      const len = bufferToHash.length;
+      const out_ptr = 50000;
+      const in_ptr = out_ptr + len;
+
+      const memView = new Uint8Array(memory.buffer);
+      memView.set(bufferToHash, in_ptr);
+
+      instance.exports.main_test(BigInt(out_ptr), BigInt(in_ptr), BigInt(len));
+
+      const outputArray = new Uint8Array(memory.buffer, out_ptr, 32);
+      console.log(Buffer.from(outputArray).toString('hex'));
+
+      return;
+    }
+
     // Special case for SHA256
     if (path.includes('sha256')) {
       const inputArg = process.argv[5];
@@ -126,6 +187,143 @@ async function runWasm(path, size, args) {
       instance.exports.main_test(BigInt(out_ptr), BigInt(in_ptr), BigInt(len));
 
       const outputArray = new Uint8Array(memory.buffer, out_ptr, 32);
+      console.log(Buffer.from(outputArray).toString('hex'));
+
+      return;
+    }
+
+    // Special case for CHACHA20XORAVX-OPT
+    if (path.includes('chacha20xoravx-opt')) {
+      const len = Number(process.argv[5]);
+      const inputHex = process.argv[6];
+      const keyHex   = process.argv[7];
+      const nonceHex = process.argv[8];
+
+      const outPtr = 50000;
+      const inPtr  = outPtr + len;
+      const noncePtr = inPtr + len;
+      const keyPtr = noncePtr + 12;
+
+      const inputBytes = Buffer.from(inputHex, 'hex');
+      const keyBytes   = Buffer.from(keyHex, 'hex');
+      const nonceBytes = Buffer.from(nonceHex, 'hex');
+
+      const memView = new Uint8Array(memory.buffer);
+      if (len > 0) memView.set(inputBytes, inPtr);
+      memView.set(nonceBytes, noncePtr);
+      memView.set(keyBytes, keyPtr);
+
+      instance.exports.main_test(BigInt(outPtr), BigInt(inPtr), BigInt(len), BigInt(noncePtr), BigInt(keyPtr));
+
+      const outputArray = new Uint8Array(memory.buffer, outPtr, len);
+      console.log(Buffer.from(outputArray).toString('hex'));
+
+      return;
+    }
+
+    // Special case for CHACHA20XORAVX
+    if (path.includes('chacha20xoravx')) {
+      const len = Number(process.argv[5]);
+      const inputHex = process.argv[6];
+      const keyHex   = process.argv[7];
+      const nonceHex = process.argv[8];
+
+      const outPtr = 50000;
+      const inPtr  = outPtr + len;
+      const noncePtr = inPtr + len;
+      const keyPtr = noncePtr + 12;
+
+      const inputBytes = Buffer.from(inputHex, 'hex');
+      const keyBytes   = Buffer.from(keyHex, 'hex');
+      const nonceBytes = Buffer.from(nonceHex, 'hex');
+
+      const memView = new Uint8Array(memory.buffer);
+      if (len > 0) memView.set(inputBytes, inPtr);
+      memView.set(nonceBytes, noncePtr);
+      memView.set(keyBytes, keyPtr);
+
+      instance.exports.main_test(BigInt(outPtr), BigInt(inPtr), BigInt(len), BigInt(noncePtr), BigInt(keyPtr));
+
+      const outputArray = new Uint8Array(memory.buffer, outPtr, len);
+      console.log(Buffer.from(outputArray).toString('hex'));
+
+      return;
+    }
+
+    // Special case for CHACHA20AVX-OPT
+    if (path.includes('chacha20avx-opt')) {
+      const len = Number(process.argv[5]);
+      const keyHex = process.argv[6];
+      const nonceHex = process.argv[7];
+
+      const outPtr = 50000;
+      const noncePtr = outPtr + len;
+      const keyPtr = noncePtr + 12;
+
+      const keyBytes = Buffer.from(keyHex, 'hex');
+      const nonceBytes = Buffer.from(nonceHex, 'hex');
+
+      const memView = new Uint8Array(memory.buffer);
+      memView.set(nonceBytes, noncePtr);
+      memView.set(keyBytes, keyPtr);
+
+      instance.exports.main_test(BigInt(outPtr), BigInt(len), BigInt(noncePtr), BigInt(keyPtr));
+
+      const outputArray = new Uint8Array(memory.buffer, outPtr, len);
+      console.log(Buffer.from(outputArray).toString('hex'));
+
+      return;
+    }
+
+    // Special case for CHACHA20AVX
+    if (path.includes('chacha20avx')) {
+      const len = Number(process.argv[5]);
+      const keyHex = process.argv[6];
+      const nonceHex = process.argv[7];
+
+      const outPtr = 50000;
+      const noncePtr = outPtr + len;
+      const keyPtr = noncePtr + 12;
+
+      const keyBytes = Buffer.from(keyHex, 'hex');
+      const nonceBytes = Buffer.from(nonceHex, 'hex');
+
+      const memView = new Uint8Array(memory.buffer);
+      memView.set(nonceBytes, noncePtr);
+      memView.set(keyBytes, keyPtr);
+
+      instance.exports.main_test(BigInt(outPtr), BigInt(len), BigInt(noncePtr), BigInt(keyPtr));
+
+      const outputArray = new Uint8Array(memory.buffer, outPtr, len);
+      console.log(Buffer.from(outputArray).toString('hex'));
+
+      return;
+    }
+
+    // Special case for CHACHA20XOR-OPT
+    if (path.includes('chacha20xor-opt')) {
+      const len = Number(process.argv[5]);
+      const inputHex = process.argv[6];
+      const keyHex   = process.argv[7];
+      const nonceHex = process.argv[8];
+
+      const outPtr = 50000;
+      const inPtr  = outPtr + len;
+      const noncePtr = inPtr + len;
+      const keyPtr = noncePtr + 12;
+
+      const inputBytes = Buffer.from(inputHex, 'hex');
+      const keyBytes   = Buffer.from(keyHex, 'hex');
+      const nonceBytes = Buffer.from(nonceHex, 'hex');
+
+      const memView = new Uint8Array(memory.buffer);
+      if (len > 0) memView.set(inputBytes, inPtr);
+      memView.set(nonceBytes, noncePtr);
+      memView.set(keyBytes, keyPtr);
+
+      instance.exports.main_test(BigInt(outPtr), BigInt(inPtr), BigInt(len), BigInt(noncePtr), BigInt(keyPtr));
+
+      const outputArray = new Uint8Array(memory.buffer, outPtr, len);
       console.log(Buffer.from(outputArray).toString('hex'));
 
       return;
@@ -153,6 +351,31 @@ async function runWasm(path, size, args) {
       memView.set(keyBytes, keyPtr);
 
       instance.exports.main_test(BigInt(outPtr), BigInt(inPtr), BigInt(len), BigInt(noncePtr), BigInt(keyPtr));
+
+      const outputArray = new Uint8Array(memory.buffer, outPtr, len);
+      console.log(Buffer.from(outputArray).toString('hex'));
+
+      return;
+    }
+
+    // Special case for CHACHA20-OPT
+    if (path.includes('chacha20-opt')) {
+      const len = Number(process.argv[5]);
+      const keyHex = process.argv[6];
+      const nonceHex = process.argv[7];
+
+      const outPtr = 50000;
+      const noncePtr = outPtr + len;
+      const keyPtr = noncePtr + 12;
+
+      const keyBytes = Buffer.from(keyHex, 'hex');
+      const nonceBytes = Buffer.from(nonceHex, 'hex');
+
+      const memView = new Uint8Array(memory.buffer);
+      memView.set(nonceBytes, noncePtr);
+      memView.set(keyBytes, keyPtr);
+
+      instance.exports.main_test(BigInt(outPtr), BigInt(len), BigInt(noncePtr), BigInt(keyPtr));
 
       const outputArray = new Uint8Array(memory.buffer, outPtr, len);
       console.log(Buffer.from(outputArray).toString('hex'));

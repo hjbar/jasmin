@@ -68,13 +68,48 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < N; i++) {
     errno = 0;
 
+    // Special case for SHA256-OPT
+    if (strstr(argv[0], "sha256-opt") != NULL) {
+      continue;
+    }
+
     // Special case for SHA256
     if (strstr(argv[0], "sha256") != NULL) {
       continue;
     }
 
+    // Special case for CHACHA20XORAVX-OPT
+    if (strstr(argv[0], "chacha20xoravx-opt") != NULL) {
+      continue;
+    }
+
+    // Special case for CHACHA20XORAVX
+    if (strstr(argv[0], "chacha20xoravx") != NULL) {
+      continue;
+    }
+
+    // Special case for CHACHA20AVX-OPT
+    if (strstr(argv[0], "chacha20avx-opt") != NULL) {
+      continue;
+    }
+
+    // Special case for CHACHA20AVX
+    if (strstr(argv[0], "chacha20avx") != NULL) {
+      continue;
+    }
+
+    // Special case for CHACHA20XOR-OPT
+    if (strstr(argv[0], "chacha20xor-OPT") != NULL) {
+      continue;
+    }
+
     // Special case for CHACHA20XOR
     if (strstr(argv[0], "chacha20xor") != NULL) {
+      continue;
+    }
+
+    // Special case for CHACHA20-OPT
+    if (strstr(argv[0], "chacha20-opt") != NULL) {
       continue;
     }
 
@@ -113,6 +148,30 @@ int main(int argc, char *argv[]) {
   int64_t res;
   uintptr_t func_ptr = (uintptr_t)main_test;
 
+  // Special case for SHA256-OPT
+  if (strstr(argv[0], "sha256-opt") != NULL) {
+    char *input_str = argv[3];
+    uint8_t *in_data;
+    uint64_t len;
+
+    if (strspn(input_str, "0123456789") == strlen(input_str)) {
+      len = strtoull(input_str, NULL, 10);
+      in_data = calloc(1, len > 0 ? len : 1);
+    } else {
+      len = strlen(input_str);
+      in_data = (uint8_t *)input_str;
+    }
+
+    uint8_t out_array[32] = {0};
+    uintptr_t func_ptr = (uintptr_t)main_test;
+    ((void (*)(uint8_t*, uint8_t*, uint64_t))func_ptr)(out_array, in_data, len);
+
+    for (int i = 0; i < 32; i++) printf("%02x", out_array[i]);
+    printf("\n");
+
+    return 0;
+  }
+
   // Special case for SHA256
   if (strstr(argv[0], "sha256") != NULL) {
     char *input_str = argv[3];
@@ -134,6 +193,127 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < 32; i++) printf("%02x", out_array[i]);
     printf("\n");
 
+    return 0;
+  }
+
+  // Special case for CHACHA20XORAVX-OPT
+  if (strstr(argv[0], "chacha20xoravx-opt") != NULL) {
+    uint64_t len = strtoull(argv[3], NULL, 10);
+    const char *input_hex = argv[4];
+    const char *key_hex   = argv[5];
+    const char *nonce_hex = argv[6];
+
+    uint8_t *out = calloc(1, len > 0 ? len : 1);
+    uint8_t *in  = calloc(1, len > 0 ? len : 1);
+    uint8_t key[32] = {0};
+    uint8_t nonce[12] = {0};
+
+    if (len > 0) hex_to_bytes(input_hex, in, len);
+    hex_to_bytes(key_hex, key, 32);
+    hex_to_bytes(nonce_hex, nonce, 12);
+
+    ((void (*)(uint8_t*, uint8_t*, uint64_t, uint8_t*, uint8_t*))func_ptr)(out, in, len, nonce, key);
+
+    for (uint64_t i = 0; i < len; i++) printf("%02x", out[i]);
+    printf("\n");
+
+    free(out); free(in);
+    return 0;
+  }
+
+  // Special case for CHACHA20XORAVX
+  if (strstr(argv[0], "chacha20xoravx") != NULL) {
+    uint64_t len = strtoull(argv[3], NULL, 10);
+    const char *input_hex = argv[4];
+    const char *key_hex   = argv[5];
+    const char *nonce_hex = argv[6];
+
+    uint8_t *out = calloc(1, len > 0 ? len : 1);
+    uint8_t *in  = calloc(1, len > 0 ? len : 1);
+    uint8_t key[32] = {0};
+    uint8_t nonce[12] = {0};
+
+    if (len > 0) hex_to_bytes(input_hex, in, len);
+    hex_to_bytes(key_hex, key, 32);
+    hex_to_bytes(nonce_hex, nonce, 12);
+
+    ((void (*)(uint8_t*, uint8_t*, uint64_t, uint8_t*, uint8_t*))func_ptr)(out, in, len, nonce, key);
+
+    for (uint64_t i = 0; i < len; i++) printf("%02x", out[i]);
+    printf("\n");
+
+    free(out); free(in);
+    return 0;
+  }
+
+  // Special case for CHACHA20AVX-OPT
+  if (strstr(argv[0], "chacha20avx-opt") != NULL) {
+    uint64_t len = strtoull(argv[3], NULL, 10);
+    const char *key_hex = argv[4];
+    const char *nonce_hex = argv[5];
+
+    uint8_t *out = calloc(1, len > 0 ? len : 1);
+    uint8_t key[32] = {0};
+    uint8_t nonce[12] = {0};
+
+    hex_to_bytes(key_hex, key, 32);
+    hex_to_bytes(nonce_hex, nonce, 12);
+
+    uintptr_t func_ptr = (uintptr_t)main_test;
+    ((void (*)(uint8_t*, uint64_t, uint8_t*, uint8_t*))func_ptr)(out, len, nonce, key);
+
+    for (uint64_t i = 0; i < len; i++) printf("%02x", out[i]);
+    printf("\n");
+
+    free(out);
+    return 0;
+  }
+
+  // Special case for CHACHA20AVX
+  if (strstr(argv[0], "chacha20avx") != NULL) {
+    uint64_t len = strtoull(argv[3], NULL, 10);
+    const char *key_hex = argv[4];
+    const char *nonce_hex = argv[5];
+
+    uint8_t *out = calloc(1, len > 0 ? len : 1);
+    uint8_t key[32] = {0};
+    uint8_t nonce[12] = {0};
+
+    hex_to_bytes(key_hex, key, 32);
+    hex_to_bytes(nonce_hex, nonce, 12);
+
+    uintptr_t func_ptr = (uintptr_t)main_test;
+    ((void (*)(uint8_t*, uint64_t, uint8_t*, uint8_t*))func_ptr)(out, len, nonce, key);
+
+    for (uint64_t i = 0; i < len; i++) printf("%02x", out[i]);
+    printf("\n");
+
+    free(out);
+    return 0;
+  }
+
+  // Special case for CHACHA20XOR-OPT
+  if (strstr(argv[0], "chacha20xor-opt") != NULL) {
+    uint64_t len = strtoull(argv[3], NULL, 10);
+    const char *input_hex = argv[4];
+    const char *key_hex   = argv[5];
+    const char *nonce_hex = argv[6];
+
+    uint8_t *out = calloc(1, len > 0 ? len : 1);
+    uint8_t *in  = calloc(1, len > 0 ? len : 1);
+    uint8_t key[32] = {0};
+    uint8_t nonce[12] = {0};
+
+    if (len > 0) hex_to_bytes(input_hex, in, len);
+    hex_to_bytes(key_hex, key, 32);
+    hex_to_bytes(nonce_hex, nonce, 12);
+
+    ((void (*)(uint8_t*, uint8_t*, uint64_t, uint8_t*, uint8_t*))func_ptr)(out, in, len, nonce, key);
+
+    for (uint64_t i = 0; i < len; i++) printf("%02x", out[i]);
+    printf("\n");
+
+    free(out); free(in);
     return 0;
   }
 
@@ -159,6 +339,29 @@ int main(int argc, char *argv[]) {
     printf("\n");
 
     free(out); free(in);
+    return 0;
+  }
+
+  // Special case for CHACHA20-OPT
+  if (strstr(argv[0], "chacha20-opt") != NULL) {
+    uint64_t len = strtoull(argv[3], NULL, 10);
+    const char *key_hex = argv[4];
+    const char *nonce_hex = argv[5];
+
+    uint8_t *out = calloc(1, len > 0 ? len : 1);
+    uint8_t key[32] = {0};
+    uint8_t nonce[12] = {0};
+
+    hex_to_bytes(key_hex, key, 32);
+    hex_to_bytes(nonce_hex, nonce, 12);
+
+    uintptr_t func_ptr = (uintptr_t)main_test;
+    ((void (*)(uint8_t*, uint64_t, uint8_t*, uint8_t*))func_ptr)(out, len, nonce, key);
+
+    for (uint64_t i = 0; i < len; i++) printf("%02x", out[i]);
+    printf("\n");
+
+    free(out);
     return 0;
   }
 

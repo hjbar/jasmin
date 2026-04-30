@@ -104,6 +104,10 @@ let check_extract_simd = function
   | Simd (I32x4 | I64x2) -> ()
   | _ -> internal_error "Wrong simd type to extract vector lanes"
 
+let check_extract_sign_simd = function
+  | Simd (I8x16 | I16x8) -> ()
+  | _ -> internal_error "Wrong simd type to extract vector lanes"
+
 let check_in_bounds simd_ty num =
   check_simd_ty simd_ty;
 
@@ -128,11 +132,6 @@ let check_max_size int_ty size =
   | _ -> assert false
 
 (* -------------------------------------------------------------------- *)
-
-let extract_ simd_ty num =
-  check_extract_simd simd_ty;
-  check_in_bounds simd_ty num;
-  Extract (simd_ty, num)
 
 let const_num_ int_ty num =
   check_int_ty int_ty;
@@ -179,6 +178,21 @@ let if_result_ res cond then_ else_ =
   check_non_empty res;
   check_tys res;
   If (res, cond, [ then_ ], [ else_ ])
+
+let extract_lane_ simd_ty num =
+  check_extract_simd simd_ty;
+  check_in_bounds simd_ty num;
+  Extract_lane (simd_ty, None, num)
+
+let extract_lane_sign_ simd_ty sign num =
+  check_extract_sign_simd simd_ty;
+  check_in_bounds simd_ty num;
+  Extract_lane (simd_ty, Some sign, num)
+
+let replace_lane_ simd_ty num =
+  check_simd_ty simd_ty;
+  check_in_bounds simd_ty num;
+  Replace_lane (simd_ty, num)
 
 (* -------------------------------------------------------------------- *)
 
@@ -661,7 +675,7 @@ and binop_to_instr ~(funname : funname) ~(i_loc : Location.i_loc) (op : Operator
     (* Ensures: op in { vlsl; vlsr; vasr } && size(op) = 128 && shift_size(op) in { 8; 16; 32; 64 } && z = shift_size(op) - 1 *)
     let op = vec_shift_to_wasm op in
     let i1 = gexpr_to_instr e1 in
-    let i2 = Unop (extract_ (Simd I32x4) (z_to_num zero), gexpr_to_instr e2) in
+    let i2 = Unop (extract_lane_ (Simd I32x4) (z_to_num zero), gexpr_to_instr e2) in
     Binop (op, i1, i2)
   (* Common cases *)
   | _ ->
@@ -738,10 +752,8 @@ let rec ginstr_to_instrs ~(funname : funname) ({ i_desc ; i_loc ; _ } as instr :
   let gexpr_to_instr = gexpr_to_instr ~funname ~i_loc in
   let gexprs_to_instrs = gexprs_to_instrs ~funname ~i_loc in
   let ginstrs_to_instrs = ginstrs_to_instrs ~funname in
-  let set_instr = set_instr ~funname ~i_loc ~instr in
   let set_value = set_value ~funname ~i_loc ~instr in
   let set_pushed_values = set_pushed_values ~funname ~i_loc ~instr in
-  let get_mulu = get_mulu ~funname ~i_loc ~instr in
 
   match i_desc with
   | Cassgn (glval, _tag, _gtype, gexpr) -> set_value gexpr glval
@@ -767,38 +779,81 @@ let rec ginstr_to_instrs ~(funname : funname) ({ i_desc ; i_loc ; _ } as instr :
     let call = Call (funname, args) in
     let sets = glvals |> List.rev |> set_pushed_values in
     call :: sets
-  | Copn (_glvals, _tag, Opseudo_op Onop, _es) -> [ Nop ]
-  | Copn ([], _tag, Opseudo_op (Odeclassify _aty), [ _ ]) -> [ Nop ]
-  | Copn ([], _tag, Opseudo_op (Odeclassify_mem _pos), [ _ ]) -> [ Nop ]
-  | Copn ([ x; y ], _tag, Opseudo_op (Omulu wsize), [ e1; e2 ]) -> get_mulu wsize x y e1 e2
-  | Copn (([_; _] as glvals), _tag, Opseudo_op (Oswap _), ([_; _] as es)) ->
-    let instrs = gexprs_to_instrs es in
-    let sets = set_pushed_values glvals in
-    instrs @ sets
-  | Copn ([ x ], _tag, Oasm (Arch_extra.BaseOp (None, Wasm_instr_decl.VSHL velem)), [ e1; e2 ]) ->
-    let op = Shl (velem_to_op_ty velem) in
-    let i1 = gexpr_to_instr e1 in
-    let i2 = gexpr_to_instr e2 in
-    set_instr x (Binop (op, i1, i2))
-  | Copn ([ x ], _tag, Oasm (Arch_extra.BaseOp (None, Wasm_instr_decl.VSHR (sign, velem))), [ e1; e2 ]) ->
-    let op = Shr (velem_to_op_ty velem, sign) in
-    let i1 = gexpr_to_instr e1 in
-    let i2 = gexpr_to_instr e2 in
-    set_instr x (Binop (op, i1, i2))
-  | Copn ([ x ], _tag, Oasm (Arch_extra.BaseOp (None, Wasm_instr_decl.SWIZZLE)), [ e1; e2 ]) ->
-    let i1 = gexpr_to_instr e1 in
-    let i2 = gexpr_to_instr e2 in
-    set_instr x (Binop (Swizzle, i1, i2))
   | Csyscall (([ _ ] as glvals), RandomBytes _, ([ _; _ ] as args)) ->
     let funname = randombytes_funname in
     let args = gexprs_to_instrs args in
     let call = Call (funname, args) in
     let sets = glvals |> List.rev |> set_pushed_values in
     call :: sets
-  | Copn _
+  | Copn (glvals, _tag, op, es) -> copn_to_instrs ~funname ~i_loc ~instr glvals op es
   | Csyscall _
   | Cassert _
   | Cfor _ -> ginstr_to_error instr
+
+and copn_to_instrs ~(funname : funname) ~(i_loc : Location.i_loc) ~(instr : ('len, 'info, 'asm) ginstr) (glvals : 'len glvals) (op : 'asm Sopn.sopn) (es : 'len gexpr list) : instrs =
+  let open Arch_extra in
+  let open Wasm_instr_decl in
+
+  let loc = Lmore i_loc in
+
+  let ginstr_to_error = ginstr_to_error ~funname ~loc in
+
+  let gexpr_to_instr = gexpr_to_instr ~funname ~i_loc in
+  let gexprs_to_instrs = gexprs_to_instrs ~funname ~i_loc in
+  let set_instr = set_instr ~funname ~i_loc ~instr in
+  let set_pushed_values = set_pushed_values ~funname ~i_loc ~instr in
+  let get_mulu = get_mulu ~funname ~i_loc ~instr in
+
+  match glvals, op, es with
+  (* Jasmin Sopn *)
+  | _glvals, Opseudo_op Onop, _es -> [ Nop ]
+  | [], Opseudo_op (Odeclassify _aty), [ _ ] -> [ Nop ]
+  | [], Opseudo_op (Odeclassify_mem _pos), [ _ ] -> [ Nop ]
+  | [ x; y ], Opseudo_op (Omulu wsize), [ e1; e2 ] -> get_mulu wsize x y e1 e2
+  | ([_; _] as glvals), Opseudo_op (Oswap _), ([_; _] as es) ->
+    let instrs = gexprs_to_instrs es in
+    let sets = set_pushed_values glvals in
+    instrs @ sets
+  (* Wasm special operations *)
+  | [ x ], Oasm (BaseOp (None, SPLAT velem)), [ gexpr ] ->
+    let op = Splat (velem_to_op_ty velem) in
+    let instr = gexpr_to_instr gexpr in
+    set_instr x (Unop (op, instr))
+  | [ x ], Oasm (BaseOp (None, EXTRACT_LANE (_, ((VE32 | VE64) as velem)))), [ Papp1 (Oword_of_int _, Pconst z); gexpr ] ->
+    let op = extract_lane_ (velem_to_op_ty velem) (z_to_num z) in
+    let instr = gexpr_to_instr gexpr in
+    set_instr x (Unop (op, instr))
+  | [ x ], Oasm (BaseOp (None, EXTRACT_LANE (sign, ((VE8 | VE16) as velem)))), [ Papp1 (Oword_of_int _, Pconst z); gexpr ] ->
+    let op = extract_lane_sign_ (velem_to_op_ty velem) sign (z_to_num z) in
+    let instr = gexpr_to_instr gexpr in
+    set_instr x (Unop (op, instr))
+  | [ x ], Oasm (BaseOp (None, REPLACE_LANE velem)), [ Papp1 (Oword_of_int _, Pconst z); e1; e2 ] ->
+    let op = replace_lane_ (velem_to_op_ty velem) (z_to_num z) in
+    let i1 = gexpr_to_instr e1 in
+    let i2 = gexpr_to_instr e2 in
+    set_instr x (Binop (op, i1, i2))
+  | [ x ], Oasm (BaseOp (None, SWIZZLE)), [ e1; e2 ] ->
+    let op = Swizzle in
+    let i1 = gexpr_to_instr e1 in
+    let i2 = gexpr_to_instr e2 in
+    set_instr x (Binop (op, i1, i2))
+  | [ x ], Oasm (BaseOp (None, SHUFFLE)), [ e1; e2; Papp1 (Oword_of_int _, Pconst z) ] ->
+    let nums = List.init 16 (fun i -> Z.extract z (i * 8) 8 |> z_to_num) in
+    let op = Shuffle nums in
+    let i1 = gexpr_to_instr e1 in
+    let i2 = gexpr_to_instr e2 in
+    set_instr x (Binop (op, i1, i2))
+  | [ x ], Oasm (BaseOp (None, VSHL velem)), [ e1; e2 ] ->
+    let op = Shl (velem_to_op_ty velem) in
+    let i1 = gexpr_to_instr e1 in
+    let i2 = gexpr_to_instr e2 in
+    set_instr x (Binop (op, i1, i2))
+  | [ x ], Oasm (BaseOp (None, VSHR (sign, velem))), [ e1; e2 ] ->
+    let op = Shr (velem_to_op_ty velem, sign) in
+    let i1 = gexpr_to_instr e1 in
+    let i2 = gexpr_to_instr e2 in
+    set_instr x (Binop (op, i1, i2))
+  | _ -> ginstr_to_error instr
 
 and ginstrs_to_instrs ~(funname : funname) (instrs : ('len, 'info, 'asm) ginstr list) : instrs =
   instrs |> List.map (ginstr_to_instrs ~funname) |> List.flatten

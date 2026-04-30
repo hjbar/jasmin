@@ -1,0 +1,71 @@
+require "chacha-opt_globals_avx_wasm.jinc"
+
+// nonce : 8 bytes
+// key : 32 bytes
+// counter : 8 bytes (starts at 0)
+inline fn __init_v_avx(reg u32 nonce key) -> reg u128[16]
+{
+  inline int i;
+  reg u128[16] _st;
+  reg u128[16] st;
+
+  // sigma
+  for i=0 to 4
+  { st[i] = CHACHA_SIGMA_V_AVX[i]; }
+
+  // key
+  for i=0 to 8
+  { st[4+i] = #SPLAT_4u32([:u32 key + 4*i]); }
+
+  // counter
+  st[12] = CHACHA_P3210_V_AVX;
+  st[13] = 0;
+
+  // nonce
+  for i=0 to 2
+  { st[14+i] = #SPLAT_4u32([:u32 nonce + 4*i]); }
+
+  _st = #copy_128(st);
+
+  //  _st:
+  //   _st[0]  = { ... , sigma0     , sigma0     }
+  //   _st[1]  = { ... , sigma1     , sigma1     }
+  //   _st[2]  = { ... , sigma2     , sigma2     }
+  //   _st[3]  = { ... , sigma3     , sigma3     }
+  //   _st[4]  = { ... , k[31:0]    , k[31:0]    }
+  //   ...
+  //   _st[11] = { ... , k[255:224] , k[255:224] }
+  //   _st[12] = {   2 , 1          , 0          }
+  //   _st[13] = { ... , 0          , 0          }
+  //   _st[14] = { ... , n[31:0]    , n[31:0]    }
+  //   _st[15] = { ... , n[63:32]   , n[63:32]   }
+
+  return _st;
+}
+
+
+// increments 64-bit counters
+inline fn __increment_counter_v_avx(reg u128[16] st) -> reg u128[16]
+{
+  reg u128 a b x y;
+
+  x = st[12]; // 2 C 0 A
+  y = st[13]; // 3 D 1 B
+
+  a = #SHUFFLE(x, y, (16u8)[23, 22, 21, 20,    7,  6,  5,  4,   19, 18, 17, 16,    3,  2,  1,  0]); // 1 0 B A
+  b = #SHUFFLE(x, y, (16u8)[31, 30, 29, 28,   15, 14, 13, 12,   27, 26, 25, 24,   11, 10,  9,  8]); // 3 2 D C
+
+  a +2u64= CHACHA_P44_V_AVX;
+  b +2u64= CHACHA_P44_V_AVX;
+
+  x = #SHUFFLE(a, b, (16u8)[23, 22, 21, 20,    7,  6,  5,  4,   19, 18, 17, 16,    3,  2,  1,  0]); // D B C A
+  y = #SHUFFLE(a, b, (16u8)[31, 30, 29, 28,   15, 14, 13, 12,   27, 26, 25, 24,   11, 10,  9,  8]); // 3 1 2 0
+
+  a = #SHUFFLE(x, y, (16u8)[23, 22, 21, 20,    7,  6,  5,  4,   19, 18, 17, 16,    3,  2,  1,  0]); // 2 C 0 A
+  b = #SHUFFLE(x, y, (16u8)[31, 30, 29, 28,   15, 14, 13, 12,   27, 26, 25, 24,   11, 10,  9,  8]); // 3 D 1 B
+
+  st[12] = a;
+  st[13] = b;
+
+  return st;
+}

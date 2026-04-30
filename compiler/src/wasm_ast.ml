@@ -69,7 +69,8 @@ type unop =
   | Extend of sign (* Only for i32 -> i64 *)
   | Wrap (* Only for i64 -> i32 *)
   | Not (* Only for v128 *)
-  | Extract of ty * num (* Only for i32x4 or i64x2 *)
+  | Splat of ty
+  | Extract_lane of ty * sign option * num
 
 type binop =
   | Add of ty
@@ -91,6 +92,8 @@ type binop =
   | Gt of ty * sign
   | Ge of ty * sign
   | Swizzle (* Only for the i8x16 interpretation *)
+  | Shuffle of num list (* Only for the i8x16 interpretation *)
+  | Replace_lane of ty * num
 
 type instr =
   | Nop

@@ -1,0 +1,4 @@
+require "chacha_state_h_avx_ref.jinc"
+require "chacha_store_h_avx_ref.jinc"
+require "chacha_core_h_avx_ref.jinc"
+require "chacha_entry_h_avx_ref.jinc"

@@ -1,0 +1,22 @@
+param int CHACHA_ROUNDS=20;
+
+require "chacha-opt_avx_wasm.jinc"
+
+export fn jade_stream_chacha_chacha20_amd64_avx_xor(reg u32 output input input_length nonce key) -> reg u32
+{
+  reg u32 r;
+  __chacha_xor_avx(output, input, input_length, nonce, key);
+  r = 0;
+  return r;
+}
+
+export fn main_test(reg u64 output input input_length nonce key) -> reg u64 {
+  reg u32 output = (32u)output;
+  reg u32 input = (32u)input;
+  reg u32 input_length = (32u)input_length;
+  reg u32 nonce = (32u)nonce;
+  reg u32 key = (32u)key;
+  reg u32 res = jade_stream_chacha_chacha20_amd64_avx_xor(output, input, input_length, nonce, key);
+  reg u64 x = (64u)res;
+  return x;
+}
