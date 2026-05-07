@@ -52,8 +52,8 @@ Definition wasm_lane_index_out_of_bounds (velem : velem) (i : Z) : bool :=
 Definition ak_reg_imm8_reg : i_args_kinds :=
     [:: [:: [:: CAreg ]; [:: CAimm_sz U8 ]; [:: CAreg ] ] ].
 
-Definition ak_reg_reg_reg_imm128 : i_args_kinds :=
-  [:: [:: [:: CAreg ]; [:: CAimm_sz U8 ]; [:: CAreg ] ; [:: CAimm_sz U128 ] ] ].
+Definition ak_reg_imm128_reg_reg : i_args_kinds :=
+  [:: [:: [:: CAreg ]; [:: CAimm_sz U128 ]; [:: CAreg ] ; [:: CAreg ] ] ].
 
 Definition ak_reg_imm8_reg_reg : i_args_kinds :=
   [:: [:: [:: CAreg ]; [:: CAimm_sz U8 ]; [:: CAreg ] ; [:: CAreg ] ] ].
@@ -350,7 +350,7 @@ Definition prim_SWIZZLE : string * prim_constructor wasm_op :=
   ("SWIZZLE"%string, primM SWIZZLE).
 
 
-Definition wasm_shuffle_semi (v1 v2 mask : word U128) : exec (word U128) :=
+Definition wasm_shuffle_semi (mask v1 v2 : word U128) : exec (word U128) :=
   let bytes := split_vec VE8 v1 ++ split_vec VE8 v2 in
   let indices := split_vec VE8 mask in
   if has (fun i => (31 <? wunsigned i)%Z) indices then Error E.no_semantics
@@ -386,7 +386,7 @@ Definition wasm_SHUFFLE_instr : instr_desc_t :=
       id_out := [:: Ea 0 ];
       id_semi := semi;
       id_nargs := 4;
-      id_args_kinds := ak_reg_reg_reg_imm128;
+      id_args_kinds := ak_reg_imm128_reg_reg;
       id_eq_size := refl_equal;
       id_check_dest := refl_equal;
       id_str_jas := jazz_name; (* how to print it in Jasmin *)

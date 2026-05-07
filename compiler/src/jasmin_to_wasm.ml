@@ -837,7 +837,7 @@ and copn_to_instrs ~(funname : funname) ~(i_loc : Location.i_loc) ~(instr : ('le
     let i1 = gexpr_to_instr e1 in
     let i2 = gexpr_to_instr e2 in
     set_instr x (Binop (op, i1, i2))
-  | [ x ], Oasm (BaseOp (None, SHUFFLE)), [ e1; e2; Papp1 (Oword_of_int _, Pconst z) ] ->
+  | [ x ], Oasm (BaseOp (None, SHUFFLE)), [ Papp1 (Oword_of_int _, Pconst z); e1; e2  ] ->
     let nums = List.init 16 (fun i -> Z.extract z (i * 8) 8 |> z_to_num) in
     let op = Shuffle nums in
     let i1 = gexpr_to_instr e1 in
