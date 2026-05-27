@@ -113,48 +113,49 @@ run_benchmark() {
   printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
 
 
-  # wat2wasm
-  wat2wasm "$f_wat" -o "$f_wasm"
-  res_wasm_wat2wasm=$(taskset --cpu-list 0 node "$f_js" "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
-  time_wasm_wat2wasm=$(extract_time "$res_wasm_wat2wasm")
-  printf "\nWasm wrapped with JS (compiled with wat2wasm) :\n\n%s\n" "$res_wasm_wat2wasm" | tee -a "$LOG_FILE"
-
-  printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
-
-
   # wasm-as
   if [ "$ALL_OPT" = true ]; then
     wasm-as --all-features "$f_wat" -o "$f_wasm"
     res_wasm_wasmas=$(taskset --cpu-list 0 node "$f_js" "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
     time_wasm_wasmas=$(extract_time "$res_wasm_wasmas")
     printf "\nWasm wrapped with JS (compiled with wasm-as) :\n\n%s\n" "$res_wasm_wasmas" | tee -a "$LOG_FILE"
+
     printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
   fi
 
 
+  # wasm-opt
+  wasm-opt -O4 --all-features "$f_wat" -o "$f_wasm"
+  res_wasm_wasmopt=$(taskset --cpu-list 0 node "$f_js" "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  time_wasm_wasmopt=$(extract_time "$res_wasm_wasmopt")
+  printf "\nWasm wrapped with JS (compiled with wasm-opt) :\n\n%s\n" "$res_wasm_wasmopt" | tee -a "$LOG_FILE"
+
+  printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
+
+
   # results
-  if [[ -z "$time_x86" || -z "$time_wasm_wat2wasm" || ( "$ALL_OPT" == "true" && -z "$time_wasm_wasmas" ) ]]; then
+  if [[ -z "$time_x86" || -z "$time_wasm_wasmopt" || ( "$ALL_OPT" == "true" && -z "$time_wasm_wasmas" ) ]]; then
     echo "Error : Time extraction failed."
     exit 1
   fi
 
   if [ "$ALL_OPT" = true ]; then
-    if [ "$(echo "$time_wasm_wat2wasm < $time_wasm_wasmas" | bc -l)" -eq 1 ]; then
-      best_wasm_time=$time_wasm_wat2wasm
-      best_wasm_name="wat2wasm"
+    if [ "$(echo "$time_wasm_wasmopt < $time_wasm_wasmas" | bc -l)" -eq 1 ]; then
+      best_wasm_time=$time_wasm_wasmopt
+      best_wasm_name="wasm-opt"
       worth_wasm_name="wasm-as"
-      wasm_diff=$(echo "scale=6; $time_wasm_wasmas / $time_wasm_wat2wasm" | bc -l)
+      wasm_diff=$(echo "scale=6; $time_wasm_wasmas / $time_wasm_wasmopt" | bc -l)
     else
       best_wasm_time=$time_wasm_wasmas
       best_wasm_name="wasm-as"
-      worth_wasm_name="wat2wasm"
-      wasm_diff=$(echo "scale=6; $time_wasm_wat2wasm / $time_wasm_wasmas" | bc -l)
+      worth_wasm_name="wasm-opt"
+      wasm_diff=$(echo "scale=6; $time_wasm_wasmopt / $time_wasm_wasmas" | bc -l)
     fi
     printf "\n%s is %s times faster than %s\n" "$best_wasm_name" "$wasm_diff" "$worth_wasm_name" | tee -a "$LOG_FILE"
     printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
   else
-    best_wasm_time=$time_wasm_wat2wasm
-    best_wasm_name="wat2wasm"
+    best_wasm_time=$time_wasm_wasmopt
+    best_wasm_name="wasm-opt"
   fi
 
   if [ "$(echo "$time_x86 < $best_wasm_time" | bc -l)" -eq 1 ]; then
