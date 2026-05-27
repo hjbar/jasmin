@@ -1,3 +1,0 @@
-require "chacha_h_avx_ref.jinc"
-require "chacha_v_avx_ref.jinc"
-require "_chacha_avx_ref.jinc"

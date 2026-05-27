@@ -1,15 +1,4 @@
-require "sha256_core_wasm.jinc"
-
-export fn jade_hash_sha256_amd64_ref(reg u64 hash input input_length) -> reg u64
-{
-  reg u64 r;
-
-  // _ = #init_msf(); // Don't exist in WebAssembly
-
-  __sha256_ref(hash, input, input_length);
-  r = 0;
-  return r;
-}
+require "../../../benchmarks/sha256/prog/sha256_wasm.jazz"
 
 export fn main_test(reg u64 hash input input_length) -> reg u64 {
   reg u64 x = jade_hash_sha256_amd64_ref(hash, input, input_length);

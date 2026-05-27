@@ -1,14 +1,4 @@
-param int CHACHA_ROUNDS=20;
-
-require "chacha_avx_wasm.jinc"
-
-export fn jade_stream_chacha_chacha20_amd64_avx(reg u64 stream stream_length nonce key) -> reg u64
-{
-  reg u64 r;
-  __chacha_avx(stream, stream_length, nonce, key);
-  r = 0;
-  return r;
-}
+require "../../../benchmarks/chacha20avx/prog/chacha20avx_wasm.jazz"
 
 export fn main_test(reg u64 stream stream_length nonce key) -> reg u64 {
   reg u64 x = jade_stream_chacha_chacha20_amd64_avx(stream, stream_length, nonce, key);

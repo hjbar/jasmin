@@ -1,4 +1,0 @@
-require "chacha_state_ref.jinc"
-require "chacha_store_ref.jinc"
-require "chacha_core_ref.jinc"
-require "chacha_entry_ref.jinc"
