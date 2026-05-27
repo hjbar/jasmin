@@ -2,40 +2,7 @@ open Utils
 open Prog
 open Glob_options
 open Wasm_ast
-
-(* -------------------------------------------------------------------- *)
-
-let rec all_equal : 'a list -> bool = function
-  | []
-  | [ _ ] -> true
-  | x :: y :: l -> x = y && all_equal (y :: l)
-
-(* -------------------------------------------------------------------- *)
-
-let rec has_randombytes_i i =
-  match i.i_desc with
-  | Csyscall (_, RandomBytes _, _) -> true
-  | Cassgn _ | Copn _ | Ccall _ | Cassert _ -> false
-  | Cif (_, c1, c2) | Cwhile(_, c1, _, _, c2) -> has_randombytes_c c1 || has_randombytes_c c2
-  | Cfor (_, _, c) -> has_randombytes_c c
-
-and has_randombytes_c c = List.exists has_randombytes_i c
-
-let has_randombytes_f (_, f) = has_randombytes_c f.f_body
-
-let has_randombytes_fs fs = List.exists has_randombytes_f fs
-
-(* -------------------------------------------------------------------- *)
-
-module Core = CoreArchFactory.Core_arch_WASM
-module Arch = Arch_full.Arch_from_Core_arch_wasm (Core)
-let pointer_data = Arch.pointer_data
-
-(* -------------------------------------------------------------------- *)
-
-let dummy_randombytes : (Wsize.wsize * BinNums.positive) Syscall_t.syscall_t = Syscall_t.RandomBytes (U8, Conv.pos_of_int 1)
-
-let randombytes_funname : funname = CoreIdent.F.mk (Asm_utils.pp_syscall dummy_randombytes)
+open Wasm_utils
 
 (* -------------------------------------------------------------------- *)
 
@@ -143,11 +110,20 @@ let const_vec_ vec_ty simd_ty nums =
   check_size_simd simd_ty nums;
   Const (vec_ty, Some simd_ty, nums)
 
-let set_ scope var instr =
-  Set (scope, var, Some instr)
+let get_var_ scope var =
+  Get (VarAccess, scope, var)
 
-let set_stack_ scope var =
-  Set (scope, var, None)
+let get_array_ ref_ty instr scope var =
+  Get (ArrayAccess (ref_ty, instr), scope, var)
+
+let set_var_ scope var instr =
+  Set (VarAccess, scope, var, Some instr)
+
+let set_var_stack_ scope var =
+  Set (VarAccess, scope, var, None)
+
+let set_array_ ref_ty ~idx scope var instr =
+  Set (ArrayAccess (ref_ty, idx), scope, var, Some instr)
 
 let load_ ty instr =
   check_ty ty;
@@ -326,6 +302,8 @@ let wsize_to_vec_ty ?funname ?loc : Wsize.wsize -> ty = function
   | _ as wsize -> wsize_to_error ?funname ?loc wsize
 
 let wsize_to_ty ?funname ?loc : Wsize.wsize -> ty = function
+  | U8 -> Extra I8
+  | U16 -> Extra I16
   | U32 -> I32
   | U64 -> I64
   | U128 -> V128
@@ -337,6 +315,17 @@ let wsize_to_op_ty ?funname ?loc : Wsize.wsize -> ty = function
   | U128 -> V128
   | _ as wsize -> wsize_to_error ?funname ?loc wsize
 
+let wsize_to_ref_ty ?funname ?loc : Wsize.wsize -> ref_ty = function
+  | U8   -> "array_i8"
+  | U16  -> "array_i16"
+  | U32  -> "array_i32"
+  | U64  -> "array_i64"
+  | U128 -> "array_v128"
+  | U256 as wsize -> wsize_to_error ?funname ?loc wsize
+
+let wsize_to_ref ?funname ?loc (wsize : Wsize.wsize) : ty =
+  Ref (wsize_to_ref_ty ?funname ?loc wsize)
+
 let gty_to_int_ty ?funname ?loc : 'len gty -> ty = function
   | Bty (U wsize) -> wsize_to_int_ty ?funname ?loc wsize
   | Bty Bool
@@ -345,9 +334,8 @@ let gty_to_int_ty ?funname ?loc : 'len gty -> ty = function
 
 let gty_to_ty ?funname ?loc : 'len gty -> ty = function
   | Bty (U wsize) -> wsize_to_ty ?funname ?loc wsize
-  | Bty Bool
-  | Bty Int
-  | Arr _ as gtype -> gty_to_error ?funname ?loc gtype
+  | Arr (wsize, _len) -> wsize_to_ref ?funname ?loc wsize
+  | Bty (Bool | Int) as gtype -> gty_to_error ?funname ?loc gtype
 
 let gvar_to_var ?funname ?loc (gvar : 'len gvar) : var =
   let var_name = gvar_name gvar in
@@ -427,14 +415,14 @@ let get_op_ext_sign : Operators.sop1 -> sign = function
   | Ozeroext _ -> Unsigned
   | _ -> assert false
 
-(* Check: op_ext in { Osignext, Ozeroext } && sizes(op_ext) = (desired, base) && desired in { U32, U64 } && base in { U8, U16 } && base = load_size *)
-let is_load_size (op_ext : Operators.sop1) (load_size : Wsize.wsize) : bool =
+(* Check: op_ext in { Osignext, Ozeroext } && sizes(op_ext) = (desired, base) && desired in { U32, U64 } && base in { U8, U16 } && base = wsize *)
+let is_valid_ext_size (op_ext : Operators.sop1) (wsize : Wsize.wsize) : bool =
   if not (is_load_op_ext op_ext) then false
   else begin
     let (desired, base) = get_op_ext_sizes op_ext in
     (desired = U32 || desired = U64) &&
     (base = U8 || base = U16) &&
-    (base = load_size)
+    (base = wsize)
   end
 
 (* -------------------------------------------------------------------- *)
@@ -527,6 +515,7 @@ let rec gexpr_to_instr ~(funname : funname) ~(i_loc : Location.i_loc) (gexpr : '
   let gexpr_to_error = gexpr_to_error ~funname ~loc in
 
   let wsize_to_ty = wsize_to_ty ~funname ~loc in
+  let wsize_to_ref_ty = wsize_to_ref_ty ~funname ~loc in
   let gty_to_ty = gty_to_ty ~funname ~loc in
   let ggvar_to_var = ggvar_to_var ~funname ~loc in
 
@@ -538,7 +527,13 @@ let rec gexpr_to_instr ~(funname : funname) ~(i_loc : Location.i_loc) (gexpr : '
   | Pvar ggvar ->
     let scope = ggvar_to_scope ggvar in
     let var = ggvar_to_var ggvar in
-    Get (scope, var)
+    get_var_ scope var
+  | Pget (_, _, wsize, ggvar, gexpr) ->
+    let ref_ty = wsize_to_ref_ty wsize in
+    let instr = gexpr_to_instr gexpr in
+    let scope = ggvar_to_scope ggvar in
+    let var = ggvar_to_var ggvar in
+    get_array_ ref_ty instr scope var
   | Pload (_aligned, ((U32 | U64 | U128) as wsize), gexpr) ->
     let ty = wsize_to_ty wsize in
     let instr = gexpr_to_instr gexpr in
@@ -555,7 +550,6 @@ let rec gexpr_to_instr ~(funname : funname) ~(i_loc : Location.i_loc) (gexpr : '
   | Pbool _
   | Pload _
   | Parr_init _
-  | Pget _
   | Psub _
   | PappN _ -> gexpr_to_error gexpr
 
@@ -584,7 +578,7 @@ and unop_to_instr ~(funname : funname) ~(i_loc : Location.i_loc) (op : Operators
     let low = z_to_num (Z.extract z 0 64) in (* bits 0 to 63 *)
     let high = z_to_num (Z.extract z 64 64) in (* bits 64 to 127 *)
     const_vec_ vec_ty (Simd I64x2) [ low; high ]
-  | op_ext, Pload (_aligned, load_size, gexpr) when is_load_size op_ext load_size ->
+  | op_ext, Pload (_aligned, load_size, gexpr) when is_valid_ext_size op_ext load_size ->
     (* Ensures: op_ext in { Osignext, Ozeroext } && sizes(op_ext) = (desired, base) && desired in { U32, U64 } && base in { U8, U16 } && base = load_size *)
     let (desired, base) = get_op_ext_sizes op_ext in
 
@@ -594,6 +588,20 @@ and unop_to_instr ~(funname : funname) ~(i_loc : Location.i_loc) (op : Operators
     let instr = gexpr_to_instr gexpr in
 
     load_size_ load_ty load_size sign instr
+  | op_ext, Pget (_, _, wsize, ggvar, gexpr) when is_valid_ext_size op_ext wsize ->
+    (* Ensures: op_ext in { Osignext, Ozeroext } && sizes(op_ext) = (desired, base) && desired in { U32, U64 } && base in { U8, U16 } && base = wsize *)
+    let (desired, _base) = get_op_ext_sizes op_ext in
+    let sign = get_op_ext_sign op_ext in
+
+    let ref_ty = wsize_to_ref_ty wsize in
+    let idx = gexpr_to_instr gexpr in
+    let scope = ggvar_to_scope ggvar in
+    let var = ggvar_to_var ggvar in
+    let instr = get_array_ ref_ty idx scope var in
+
+    if      desired = U32 then instr
+    else if desired = U64 then Unop (Extend sign, instr)
+    else assert false
   | _ ->
     match op with
     (* Special cases on op *)
@@ -873,11 +881,17 @@ and set_instr ~(funname : funname) ~(i_loc : Location.i_loc) ~(instr : ('len, 'i
   | Lvar igvar ->
     let scope = igvar_to_scope igvar in
     let var = igvar_to_var igvar in
-    [ set_ scope var winstr ]
+    [ set_var_ scope var winstr ]
   | Lmem (_align, wsize, _info, addr) ->
     let ty = wsize_to_ty wsize in
     let addr = gexpr_to_instr addr in
     [ store_ ty addr winstr ]
+  | Laset (_align, _access, wsize, igvar, gexpr) ->
+    let ref_ty = wsize_to_ref_ty wsize in
+    let idx = gexpr_to_instr gexpr in
+    let scope = igvar_to_scope igvar in
+    let var = igvar_to_var igvar in
+    [ set_array_ ref_ty ~idx scope var winstr ]
   | _ -> ginstr_to_error instr
 
 and set_value ~(funname : funname) ~(i_loc : Location.i_loc) ~(instr : ('len, 'info, 'asm) ginstr) (gexpr : 'len gexpr) (glval : 'len glval) : instrs =
@@ -903,6 +917,15 @@ and set_value ~(funname : funname) ~(i_loc : Location.i_loc) ~(instr : ('len, 'i
     let addr = gexpr_to_instr addr in
     let instr = gexpr_to_instr gexpr in
     [ store_size_ store_ty store_size addr instr ]
+  | Laset (_align, _access, ((U8 | U16) as wsize), igvar, idx), Papp1 (Ozeroext (desired, ((U16 | U32 | U64) as base)), value) when wsize = desired ->
+    let ref_ty = wsize_to_ref_ty wsize in
+    let idx = gexpr_to_instr idx in
+    let scope = igvar_to_scope igvar in
+    let var = igvar_to_var igvar in
+    let value = gexpr_to_instr value in
+
+    let value = if base = U64 then Unop (Wrap, value) else value in
+    [ set_array_ ref_ty ~idx scope var value ]
   (* Commom cases *)
   | _ -> set_instr glval (gexpr_to_instr gexpr)
 
@@ -921,7 +944,7 @@ and set_pushed_value ~(funname : funname) ~(i_loc : Location.i_loc) ~(instr : ('
   | Lvar igvar ->
     let scope = igvar_to_scope igvar in
     let var = igvar_to_var igvar in
-    set_stack_ scope var
+    set_var_stack_ scope var
   | Lmem (_aligned, wsize, _info, addr) ->
     let ty = wsize_to_ty wsize in
     let addr = gexpr_to_instr addr in
@@ -991,7 +1014,7 @@ let init_rip ?funname ?loc (locals : 'len gvar list) ~(rip_addr : Z.t) ~(rip : '
     let var = gvar_to_var rip in
     let ty = rip |> gvar_type |> gty_to_int_ty in
     let num = z_to_num rip_addr in
-    set_ scope var (const_num_ ty num)
+    set_var_ scope var (const_num_ ty num)
   end
 
 let init_rsp ?funname ?loc (locals : 'len gvar list) ~(rsp_addr : Z.t) ~(rsp : 'len gvar) : instr =
@@ -1005,7 +1028,7 @@ let init_rsp ?funname ?loc (locals : 'len gvar list) ~(rsp_addr : Z.t) ~(rsp : '
     let var = gvar_to_var rsp in
     let ty = rsp |> gvar_type |> gty_to_int_ty in
     let num = z_to_num rsp_addr in
-    set_ scope var (const_num_ ty num)
+    set_var_ scope var (const_num_ ty num)
   end
 
 let get_func ~(rsp_addr : Z.t) ~(rip_addr : Z.t) ~(rsp : 'len gvar) ~(rip : 'len gvar) ((_extra, func) : ('info, 'asm) sfundef) : func * funname option =
@@ -1031,7 +1054,7 @@ let get_func ~(rsp_addr : Z.t) ~(rip_addr : Z.t) ~(rsp : 'len gvar) ~(rip : 'len
     let init_rip = init_rip locals ~rip_addr ~rip in
     let init_rsp = init_rsp locals ~rsp_addr ~rsp in
 
-    let gets = List.map (fun igvar -> Get (igvar_to_scope igvar, igvar_to_var igvar)) func.f_ret in
+    let gets = List.map (fun igvar -> get_var_ (igvar_to_scope igvar) (igvar_to_var igvar)) func.f_ret in
     let return = Return gets in
 
     (init_rip :: init_rsp :: ginstrs_to_instrs func.f_body) @ [ return ]
@@ -1093,6 +1116,16 @@ let get_datas ~(rip_addr : num) (sp_globs : Word.word list) : data list =
 
 (* -------------------------------------------------------------------- *)
 
+let get_decls (fs : ('info, 'asm) sfundef list) : decl list =
+  List.map (
+    fun w ->
+      let decl_name = wsize_to_ref_ty w in
+      let decl_kind = Array (Mutable, wsize_to_ty w) in
+      { decl_name; decl_kind }
+  ) (List.filter (fun w -> has_ref_fs w fs) [ U8; U16; U32; U64; U128 ])
+
+(* -------------------------------------------------------------------- *)
+
 let get_rsp_addr ~(rip_addr : Z.t) (sp_globs : Word.word list) : Z.t =
   rip_addr +@ Z.of_int (List.length sp_globs)
 
@@ -1107,8 +1140,9 @@ let compile_prog ~(mod_name : name) ~(mem_env : name) ~(mem_name : name) ~(mem_m
   let mod_mems = get_memory ~mem_env ~mem_name ~mem_min in
   let mod_imports = get_imports ~import_env funcs in
   let mod_datas = get_datas ~rip_addr sp_globs in
+  let mod_decls = get_decls funcs in
   let mod_funcs, mod_exports = get_funcs ~rsp_addr ~rip_addr ~rsp ~rip funcs in
   let mod_init = None in
   let mod_start = None in
 
-  { mod_name; mod_mems ; mod_imports ; mod_datas; mod_funcs ; mod_init ; mod_exports ; mod_start }
+  { mod_name; mod_mems ; mod_imports ; mod_datas; mod_decls; mod_funcs ; mod_init ; mod_exports ; mod_start }

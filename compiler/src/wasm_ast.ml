@@ -18,17 +18,44 @@ type size =
 
 (* -------------------------------------------------------------------- *)
 
+type simd_ty =
+  | I8x16
+  | I16x8
+  | I32x4
+  | I64x2
+
+type extra_ty =
+  | I8
+  | I16
+
+type ref_ty = name
+
 type ty =
   | I32
   | I64
   | V128
   | Simd of simd_ty
+  | Extra of extra_ty
+  | Ref of ref_ty
 
-and simd_ty =
-  | I8x16
-  | I16x8
-  | I32x4
-  | I64x2
+(* -------------------------------------------------------------------- *)
+
+type mutability =
+  | Mutable
+  | Immutable
+
+type field_name = name
+
+type field = field_name * mutability * ty
+
+type ref_kind =
+  | Array of mutability * ty
+  | Struct of field list
+
+type decl = {
+  decl_name : ref_ty;
+  decl_kind : ref_kind;
+}
 
 (* -------------------------------------------------------------------- *)
 
@@ -101,8 +128,8 @@ type instr =
   | Unop of unop * instr
   | Binop of binop * instr * instr
   | Const of ty * ty option * num list
-  | Get of scope * var
-  | Set of scope * var * instr option
+  | Get of access * scope * var
+  | Set of access * scope * var * instr option
   | Load of ty * size option * sign option * instr
   | Store of ty * size option * instr * instr option
   | If of ty list * instr * instrs * instrs
@@ -113,6 +140,11 @@ type instr =
   | Return of instrs
 
 and instrs = instr list
+
+and access =
+  | VarAccess
+  | ArrayAccess of ref_ty * instr
+  | StructAccess of ref_ty * field_name
 
 (* -------------------------------------------------------------------- *)
 
@@ -131,6 +163,7 @@ type wasm_module = {
   mod_mems : mem list;
   mod_imports : import list;
   mod_datas : data list;
+  mod_decls : decl list;
   mod_funcs : func list;
   mod_init : func option;
   mod_exports : funname list;

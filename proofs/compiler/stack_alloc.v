@@ -1713,7 +1713,7 @@ Definition check_lval_reg_call (r:lval) :=
 Definition get_regptr (x:var_i) :=
   match get_local x with
   | Some (Pregptr p false) => ok (with_var x p)
-  | Some (Pregptr _ true ) => Error (stk_error x (pp_box [:: pp_s "variable"; pp_var x; pp_s "should be non-reference reg ptr"]))
+  | Some (Pregptr _ true ) => ok x
   | _ => Error (stk_ierror x (pp_box [:: pp_s "variable"; pp_var x; pp_s "should be a reg ptr"]))
   end.
 

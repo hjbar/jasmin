@@ -1,0 +1,4 @@
+(export "len_array_TYPE" (func $len_array_TYPE))
+(export "get_array_TYPE" (func $get_array_TYPE))
+(export "set_array_TYPE" (func $set_array_TYPE))
+(export "new_array_TYPE" (func $new_array_TYPE))
