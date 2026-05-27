@@ -68,7 +68,7 @@ f_o="$ROOT_DIR/ref/${name}_ref.o"
 f_exe="$ROOT_DIR/ref/${name}_ref.exe"
 
 "$COMPILER" -arch x86-64 -pasm -nowarning "$ref_file" > "$f_s"
-gcc -O3 -c "$f_c" -o "$f_main_o" -lm
+gcc -O3 -I"$BENCH_ROOT" -c "$f_c" -o "$f_main_o" -lm
 gcc -O3 -c "$f_s" -o "$f_o" -lm
 gcc -O3 -no-pie "$f_main_o" "$f_o" -o "$f_exe" -lm
 
