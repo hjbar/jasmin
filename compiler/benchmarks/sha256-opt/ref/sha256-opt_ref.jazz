@@ -1,4 +1,4 @@
-require "sha256-opt_core_ref.jinc"
+require "../../sha256/ref/sha256_core_ref.jinc"
 
 export fn jade_hash_sha256_amd64_ref(reg u64 hash input input_length) -> reg u64
 {

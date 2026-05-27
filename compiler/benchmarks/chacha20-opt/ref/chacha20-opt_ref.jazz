@@ -1,6 +1,6 @@
 param int CHACHA_ROUNDS=20;
 
-require "chacha-opt_ref.jinc"
+require "../../chacha20/ref/chacha_ref.jinc"
 
 export fn jade_stream_chacha_chacha20_amd64_ref(reg u64 stream stream_length nonce key) -> reg u64
 {

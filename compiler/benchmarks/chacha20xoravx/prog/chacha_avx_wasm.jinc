@@ -1,3 +1,0 @@
-require "chacha_h_avx_wasm.jinc"
-require "chacha_v_avx_wasm.jinc"
-require "_chacha_avx_wasm.jinc"
