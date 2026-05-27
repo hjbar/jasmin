@@ -78,7 +78,7 @@ run_tests() {
     printf "Compile $base to Wasm...\n\n"
   fi
   "$COMPILER" -arch wasm -pasm -nowarning "$f_jazz" > "$f_wat" || { echo -e "${RED}Compilation error (jasminc)${NC}"; return 1; }
-  wat2wasm "$f_wat" -o "$f_wasm" || { echo -e "${RED}Compilation error (wat2wasm)${NC}"; return 1; }
+  wasm-as --all-features "$f_wat" -o "$f_wasm" || { echo -e "${RED}Compilation error (wasm-as)${NC}"; return 1; }
 
   # Compare results
   if [ "$VERBOSE" = true ]; then

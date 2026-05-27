@@ -153,7 +153,7 @@ run_tests() {
       printf "Compile $base to Wasm...\n\n"
     fi
     "$COMPILER" -arch wasm -pasm -nowarning "$f_jazz" > "$f_wat" || { error=true; continue; }
-    wat2wasm "$f_wat" -o "$f_wasm" || { error=true; continue; }
+    wasm-as --all-features "$f_wat" -o "$f_wasm" || { error=true; continue; }
 
     # Compare results
     if [ "$VERBOSE" = true ]; then
