@@ -125,13 +125,45 @@ run_benchmark() {
   fi
 
 
-  # wasm-opt
-  wasm-opt -O4 --all-features "$f_wat" -o "$f_wasm"
-  res_wasm_wasmopt=$(taskset --cpu-list 0 node "$f_js" "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
-  time_wasm_wasmopt=$(extract_time "$res_wasm_wasmopt")
-  printf "\nWasm wrapped with JS (compiled with wasm-opt) :\n\n%s\n" "$res_wasm_wasmopt" | tee -a "$LOG_FILE"
+  # wasm-opt -O3
+  wasm-opt -O3 --all-features "$f_wat" -o "$f_wasm"
+  res_wasm_wasmopt3=$(taskset --cpu-list 0 node "$f_js" "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  time_wasm_wasmopt3=$(extract_time "$res_wasm_wasmopt3")
+  printf "\nWasm wrapped with JS (compiled with wasm-opt -O3) :\n\n%s\n" "$res_wasm_wasmopt3" | tee -a "$LOG_FILE"
 
   printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
+
+
+  # wasm-opt -O4
+  if [ "$ALL_OPT" = true ]; then
+    wasm-opt -O4 --all-features "$f_wat" -o "$f_wasm"
+    res_wasm_wasmopt4=$(taskset --cpu-list 0 node "$f_js" "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+    time_wasm_wasmopt4=$(extract_time "$res_wasm_wasmopt4")
+    printf "\nWasm wrapped with JS (compiled with wasm-opt -O4) :\n\n%s\n" "$res_wasm_wasmopt4" | tee -a "$LOG_FILE"
+
+    printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
+  fi
+
+
+  # save the best wasm-opt between O3 and O4
+  if [ "$ALL_OPT" = true ]; then
+    if [ "$(echo "$time_wasm_wasmopt3 < $time_wasm_wasmopt4" | bc -l)" -eq 1 ]; then
+      time_wasm_wasmopt=$time_wasm_wasmopt3
+      name_wasm_wasmopt="wasm-opt -O3"
+      name_wasmopt_other="wasm-opt -O4"
+      wasmopt_diff=$(echo "scale=6; $time_wasm_wasmopt4 / $time_wasm_wasmopt3" | bc -l)
+    else
+      time_wasm_wasmopt=$time_wasm_wasmopt4
+      name_wasm_wasmopt="wasm-opt -O4"
+      name_wasmopt_other="wasm-opt -O3"
+      wasmopt_diff=$(echo "scale=6; $time_wasm_wasmopt3 / $time_wasm_wasmopt4" | bc -l)
+    fi
+    printf "\n%s is %s times faster than %s\n" "$name_wasm_wasmopt" "$wasmopt_diff" "$name_wasmopt_other" | tee -a "$LOG_FILE"
+    printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
+  else
+    time_wasm_wasmopt=$time_wasm_wasmopt3
+    name_wasm_wasmopt="wasm-opt -O3"
+  fi
 
 
   # results
@@ -143,20 +175,20 @@ run_benchmark() {
   if [ "$ALL_OPT" = true ]; then
     if [ "$(echo "$time_wasm_wasmopt < $time_wasm_wasmas" | bc -l)" -eq 1 ]; then
       best_wasm_time=$time_wasm_wasmopt
-      best_wasm_name="wasm-opt"
+      best_wasm_name="$name_wasm_wasmopt"
       worth_wasm_name="wasm-as"
       wasm_diff=$(echo "scale=6; $time_wasm_wasmas / $time_wasm_wasmopt" | bc -l)
     else
       best_wasm_time=$time_wasm_wasmas
       best_wasm_name="wasm-as"
-      worth_wasm_name="wasm-opt"
+      worth_wasm_name="$name_wasm_wasmopt"
       wasm_diff=$(echo "scale=6; $time_wasm_wasmopt / $time_wasm_wasmas" | bc -l)
     fi
     printf "\n%s is %s times faster than %s\n" "$best_wasm_name" "$wasm_diff" "$worth_wasm_name" | tee -a "$LOG_FILE"
     printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
   else
     best_wasm_time=$time_wasm_wasmopt
-    best_wasm_name="wasm-opt"
+    best_wasm_name="$name_wasm_wasmopt"
   fi
 
   if [ "$(echo "$time_x86 < $best_wasm_time" | bc -l)" -eq 1 ]; then
