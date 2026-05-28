@@ -35,7 +35,7 @@ function initChachaXorArgs(memory) {
   const nonceBuf = Buffer.alloc(12, 0).fill(NONCE_HEX, 'hex');
   const keyBuf = Buffer.alloc(32, 0).fill(KEY_HEX, 'hex');
 
-  const outPtr = 0;
+  const outPtr = 50000;
   const inPtr = outPtr + (INPUT_LENGTH > 0 ? INPUT_LENGTH : 1);
   const noncePtr = inPtr + (INPUT_LENGTH > 0 ? INPUT_LENGTH : 1);
   const keyPtr = noncePtr + 12;

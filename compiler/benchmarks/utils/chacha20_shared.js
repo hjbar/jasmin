@@ -33,7 +33,7 @@ function initChachaArgs(memory) {
   const nonceBuf = Buffer.alloc(12, 0).fill(NONCE_HEX, 'hex');
   const keyBuf = Buffer.alloc(32, 0).fill(KEY_HEX, 'hex');
 
-  const streamPtr = 0;
+  const streamPtr = 50000;
   const noncePtr = streamPtr + (STREAM_LENGTH > 0 ? STREAM_LENGTH : 1);
   const keyPtr = noncePtr + 12;
 
