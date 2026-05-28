@@ -1,5 +1,5 @@
 // IMPORT THE BENCH RUNNER
-#include "../bench_runner.h"
+#include "../utils/bench_runner.h"
 
 
 // DECLARE THE X86-64 PROGRAM

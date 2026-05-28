@@ -42,6 +42,7 @@ ROOT_DIR="$TARGET_DIR"
 BENCH_ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 COMPILER_DIR=$(dirname "$BENCH_ROOT")
 COMPILER="$COMPILER_DIR/jasminc"
+UTILS_DIR="$BENCH_ROOT/utils"
 
 if [ ! -f "$ROOT_DIR/bench.conf" ]; then
     echo "Error: Configuration file $ROOT_DIR/bench.conf not found."
@@ -68,7 +69,7 @@ f_o="$ROOT_DIR/ref/${name}_ref.o"
 f_exe="$ROOT_DIR/ref/${name}_ref.exe"
 
 "$COMPILER" -arch x86-64 -pasm -nowarning "$ref_file" > "$f_s"
-gcc -O3 -I"$BENCH_ROOT" -c "$f_c" -o "$f_main_o" -lm
+gcc -O3 -I"$UTILS_DIR" -c "$f_c" -o "$f_main_o" -lm
 gcc -O3 -c "$f_s" -o "$f_o" -lm
 gcc -O3 -no-pie "$f_main_o" "$f_o" -o "$f_exe" -lm
 
