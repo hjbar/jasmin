@@ -270,9 +270,6 @@ Definition compiler_first_part (to_keep: seq funname) (p: uprog) : cexec uprog :
   Let p := wi2w_prog (wsw:=withsubword) cparams.(remove_wint_annot) cparams.(dead_vars_ufd) p in
   let p := cparams.(print_uprog) WintWord p in
 
-  let p := insert_renaming_prog cparams.(insert_renaming) p in
-  let p := cparams.(print_uprog) InsertRenaming p in
-
   Let p := array_copy_prog (λ k ii, cparams.(fresh_var_ident) k ii 0) p in
   let p := cparams.(print_uprog) ArrayCopy p in
 
