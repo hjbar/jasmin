@@ -150,15 +150,12 @@ run_benchmark() {
     if [ "$(echo "$time_wasm_wasmopt3 < $time_wasm_wasmopt4" | bc -l)" -eq 1 ]; then
       time_wasm_wasmopt=$time_wasm_wasmopt3
       name_wasm_wasmopt="wasm-opt -O3"
-      name_wasmopt_other="wasm-opt -O4"
-      wasmopt_diff=$(echo "scale=6; $time_wasm_wasmopt4 / $time_wasm_wasmopt3" | bc -l)
     else
       time_wasm_wasmopt=$time_wasm_wasmopt4
       name_wasm_wasmopt="wasm-opt -O4"
-      name_wasmopt_other="wasm-opt -O3"
-      wasmopt_diff=$(echo "scale=6; $time_wasm_wasmopt3 / $time_wasm_wasmopt4" | bc -l)
     fi
-    printf "\n%s is %s times faster than %s\n" "$name_wasm_wasmopt" "$wasmopt_diff" "$name_wasmopt_other" | tee -a "$LOG_FILE"
+    wasmopt_diff=$(echo "scale=6; $time_wasm_wasmopt3 / $time_wasm_wasmopt4" | bc -l)
+    LC_NUMERIC=C printf "\nRatio between wasm-opt -O3 and wasm-opt -O4 : %.6f\n" "$wasmopt_diff" | tee -a "$LOG_FILE"
     printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
   else
     time_wasm_wasmopt=$time_wasm_wasmopt3
@@ -176,28 +173,20 @@ run_benchmark() {
     if [ "$(echo "$time_wasm_wasmopt < $time_wasm_wasmas" | bc -l)" -eq 1 ]; then
       best_wasm_time=$time_wasm_wasmopt
       best_wasm_name="$name_wasm_wasmopt"
-      worth_wasm_name="wasm-as"
-      wasm_diff=$(echo "scale=6; $time_wasm_wasmas / $time_wasm_wasmopt" | bc -l)
     else
       best_wasm_time=$time_wasm_wasmas
       best_wasm_name="wasm-as"
-      worth_wasm_name="$name_wasm_wasmopt"
-      wasm_diff=$(echo "scale=6; $time_wasm_wasmopt / $time_wasm_wasmas" | bc -l)
     fi
-    printf "\n%s is %s times faster than %s\n" "$best_wasm_name" "$wasm_diff" "$worth_wasm_name" | tee -a "$LOG_FILE"
+    wasm_diff=$(echo "scale=6; $time_wasm_wasmas / $time_wasm_wasmopt" | bc -l)
+    LC_NUMERIC=C printf "\nRatio between wasm-as and %s : %.6f\n" "$name_wasm_wasmopt" "$wasm_diff" | tee -a "$LOG_FILE"
     printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
   else
     best_wasm_time=$time_wasm_wasmopt
     best_wasm_name="$name_wasm_wasmopt"
   fi
 
-  if [ "$(echo "$time_x86 < $best_wasm_time" | bc -l)" -eq 1 ]; then
-    final_diff=$(echo "scale=6; $best_wasm_time / $time_x86" | bc -l)
-    printf "\nX86-64 is %s times faster than Wasm (%s)\n" "$final_diff" "$best_wasm_name" | tee -a "$LOG_FILE"
-  else
-    final_diff=$(echo "scale=6; $time_x86 / $best_wasm_time" | bc -l)
-    printf "\nWasm (%s) is %s times faster than X86-64\n" "$best_wasm_name" "$final_diff" | tee -a "$LOG_FILE"
-  fi
+  final_diff=$(echo "scale=6; $best_wasm_time / $time_x86" | bc -l)
+  LC_NUMERIC=C printf "\nRatio between Wasm (%s) and X86-64 : %.6f\n" "$best_wasm_name" "$final_diff" | tee -a "$LOG_FILE"
 
 
   # end log file
