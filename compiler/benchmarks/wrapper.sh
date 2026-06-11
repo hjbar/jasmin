@@ -7,6 +7,8 @@ usage() {
   echo "Options:"
   echo "  --rm-logs   Remove all the sub-logs (without compute benchmarks)"
   echo "  --mk-logs   Generate only the global-log (without compute benchmarks)"
+  echo "  --rm-latex  Remove all the sub-latex (without compute benchmarks)"
+  echo "  --mk-latex  Generate only the global-latex (without compute benchmarks)"
   echo "  --all       All wasm versions considered"
   exit 1
 }
@@ -14,6 +16,8 @@ usage() {
 NB_REPEAT=""
 RM_LOGS=false
 MK_LOGS=false
+RM_LATEX=false
+MK_LATEX=false
 ALL=false
 
 if [ "$#" -lt 1 ]; then
@@ -22,10 +26,12 @@ fi
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
-    --rm-logs) RM_LOGS=true; shift ;;
-    --mk-logs) MK_LOGS=true; shift ;;
-    --all)     ALL=true;     shift ;;
-    -h|--help) usage ;;
+    --rm-logs)  RM_LOGS=true; shift ;;
+    --mk-logs)  MK_LOGS=true; shift ;;
+    --rm-latex) RM_LATEX=true; shift ;;
+    --mk-latex) MK_LATEX=true; shift ;;
+    --all)      ALL=true;     shift ;;
+    -h|--help)  usage ;;
     *)
       if [[ "$1" =~ ^[0-9]+$ ]]; then
         NB_REPEAT=$1
@@ -48,6 +54,7 @@ fi
 ROOT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 COMPILER_DIR=$(dirname "$ROOT_DIR")
 LOG_DIR="$ROOT_DIR/logs"
+LATEX_DIR="$ROOT_DIR/latex"
 
 GIMLI="$ROOT_DIR/gimli"
 
@@ -80,6 +87,9 @@ LOG_FILE="$LOG_DIR/$LOG_NAME"
 
 LOG_NAME_SHORT="log_${NB_REPEAT}.txt"
 LOG_FILE_SHORT="$LOG_DIR/$LOG_NAME_SHORT"
+
+LATEX_NAME="latex_${NB_REPEAT}.txt"
+LATEX_FILE="$LATEX_DIR/$LATEX_NAME"
 
 SEP1="########################################################################################"
 SEP2="========================================================================================"
@@ -133,7 +143,7 @@ make_logs() {
   for folder in "${SCRIPTS[@]}"; do
 
     SEARCH="log_verbose_*_${NB_REPEAT}_*.txt"
-    find "$folder/logs" -type f -name "$SEARCH" | sort | while read -r current_log; do
+    find "$folder/logs" -type f -name "$SEARCH" | sort -t '_' -k 4 -rn | while read -r current_log; do
       {
         echo ""
         echo "$SEP1"
@@ -146,7 +156,7 @@ make_logs() {
     done
 
     SEARCH_SHORT="log_*_${NB_REPEAT}_*.txt"
-    find "$folder/logs" -type f -name "$SEARCH_SHORT" ! -name "$SEARCH" | sort | while read -r current_log; do
+    find "$folder/logs" -type f -name "$SEARCH_SHORT" ! -name "$SEARCH" | sort -t '_' -k 4 -rn | while read -r current_log; do
       {
         echo ""
         echo "$SEP1"
@@ -162,12 +172,46 @@ make_logs() {
 }
 
 
+# Remove latex
+remove_latex() {
+  for folder in "${SCRIPTS[@]}"; do
+    rm -rf "$folder/latex/latex_"*"_${NB_REPEAT}_"*.txt
+  done
+
+  rm -rf "$LATEX_FILE"
+}
+
+
+# Make latex
+make_latex() {
+  # Make the latex dir
+  mkdir -p "$LATEX_DIR"
+
+  # Make the global latex
+  echo "Algorithm name;Is opt algorithm;Ratio wasm-opt -O3 / wasm-opt -O4;Ratio wasm-as / best-wasm-opt;Ratio wasm-as / X86-64;Ratio wasm-opt -O3 / X86-64;Ratio wasm-opt -O4 / X86-64;Ratio best-Wasm / X86-64" > "$LATEX_FILE"
+
+  for folder in "${SCRIPTS[@]}"; do
+
+    SEARCH="latex_*_${NB_REPEAT}_*.txt"
+    find "$folder/latex" -type f -name "$SEARCH" | sort -t '_' -k 4 -rn | while read -r current_latex; do
+      cat "$current_latex" >> "$LATEX_FILE"
+    done
+
+  done
+}
+
+
 # Main script
 if [ "$RM_LOGS" = true ]; then
   remove_logs
 elif [ "$MK_LOGS" = true ]; then
   make_logs
+elif [ "$RM_LATEX" = true ]; then
+  remove_latex
+elif [ "$MK_LATEX" = true ]; then
+  make_latex
 else
   bench
   make_logs
+  make_latex
 fi

@@ -53,6 +53,9 @@ source "$ROOT_DIR/bench.conf"
 LOG_DIR="$ROOT_DIR/logs"
 mkdir -p "$LOG_DIR"
 
+LATEX_DIR="$ROOT_DIR/latex"
+mkdir -p "$LATEX_DIR"
+
 SEP1="########################################################################################"
 SEP2="========================================================================================"
 SEP3="----------------------------------------------------------------------------------------"
@@ -94,11 +97,14 @@ extract_time() {
 
 run_benchmark() {
   # init locals
-  local loop_repeat=$1
-  local algo_args=("${@:2}")
+  local bench_note=$1
+  local is_opt=$2
+  local loop_repeat=$3
+  local algo_args=("${@:4}")
 
-  local iter_id=${2:-"default"}
+  local iter_id=${4:-"default"}
   local LOG_FILE="$LOG_DIR/log_verbose_${name}_${loop_repeat}_${iter_id}.txt"
+  local LATEX_FILE="$LATEX_DIR/latex_${name}_${loop_repeat}_${iter_id}.txt"
 
 
   # start log file
@@ -187,6 +193,31 @@ run_benchmark() {
 
   final_diff=$(echo "scale=6; $best_wasm_time / $time_x86" | bc -l)
   LC_NUMERIC=C printf "\nRatio between Wasm (%s) and X86-64 : %.6f\n" "$best_wasm_name" "$final_diff" | tee -a "$LOG_FILE"
+
+
+  # summary
+  if [ "$ALL_OPT" = true ]; then
+    printf "\n%s\n%s\n" "$SEP3" "$SEP3" | tee -a "$LOG_FILE"
+
+    LC_NUMERIC=C printf "\nRatio between wasm-opt -O3 and wasm-opt -O4 : %.6f\n" "$wasmopt_diff" | tee -a "$LOG_FILE"
+
+    LC_NUMERIC=C printf "\nRatio between wasm-as and best-wasm-opt : %.6f\n" "$wasm_diff" | tee -a "$LOG_FILE"
+
+    wasmas_x86_diff=$(echo "scale=6; $time_wasm_wasmas / $time_x86" | bc -l)
+    LC_NUMERIC=C printf "\nRatio between wasm-as and X86-64 : %.6f\n" "$wasmas_x86_diff" | tee -a "$LOG_FILE"
+
+    wasmopt3_x86_diff=$(echo "scale=6; $time_wasm_wasmopt3 / $time_x86" | bc -l)
+    LC_NUMERIC=C printf "\nRatio between wasm-opt -O3 and X86-64 : %.6f\n" "$wasmopt3_x86_diff" | tee -a "$LOG_FILE"
+
+    wasmopt4_x86_diff=$(echo "scale=6; $time_wasm_wasmopt4 / $time_x86" | bc -l)
+    LC_NUMERIC=C printf "\nRatio between wasm-opt -O4 and X86-64 : %.6f\n" "$wasmopt4_x86_diff" | tee -a "$LOG_FILE"
+
+    LC_NUMERIC=C printf "\nRatio between best-Wasm and X86-64 : %.6f\n" "$final_diff" | tee -a "$LOG_FILE"
+
+    LC_NUMERIC=C printf "%s (%s);%s;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f\n" \
+                        "$name" "$bench_note" "$is_opt" "$wasmopt_diff" "$wasm_diff" "$wasmas_x86_diff" "$wasmopt3_x86_diff" "$wasmopt4_x86_diff" "$final_diff" \
+                        > "$LATEX_FILE"
+  fi
 
 
   # end log file
