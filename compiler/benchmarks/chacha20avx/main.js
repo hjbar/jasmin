@@ -6,7 +6,7 @@ const { mainChacha } = require('../utils/chacha20_shared');
 // Main function
 async function main() {
 
-  const { exports, memory } = await initWasm('chacha20avx/prog/chacha20avx_wasm.wasm');
+  const { exports, memory } = await initWasm(__dirname, 'chacha20avx_wasm.wasm');
   const fn = exports.jade_stream_chacha_chacha20_amd64_avx;
   mainChacha(memory, fn, withBigInt = true);
 

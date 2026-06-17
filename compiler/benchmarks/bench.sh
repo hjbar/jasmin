@@ -1,5 +1,7 @@
 #!/bin/bash
 
+BENCH_ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+
 
 # PARSE OPTIONS
 usage() {
@@ -18,8 +20,8 @@ while [[ "$#" -gt 0 ]]; do
     -a) ALL_OPT=true; shift ;;
     -h|--help) usage ;;
     *)
-      if [ -z "$TARGET_DIR" ] && [ -d "$1" ]; then
-        TARGET_DIR=$(cd "$1" && pwd)
+      if [ -z "$TARGET_DIR" ] && [ -d "$BENCH_ROOT/$1" ]; then
+        TARGET_DIR=$1
       elif [[ "$1" =~ ^[0-9]+$ ]]; then
         NB_REPEAT=$1
       else
@@ -38,8 +40,7 @@ fi
 
 
 # GLOBALS
-ROOT_DIR="$TARGET_DIR"
-BENCH_ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+ROOT_DIR="$BENCH_ROOT/$TARGET_DIR"
 COMPILER_DIR=$(dirname "$BENCH_ROOT")
 COMPILER="$COMPILER_DIR/jasminc"
 UTILS_DIR="$BENCH_ROOT/utils"

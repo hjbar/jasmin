@@ -15,7 +15,7 @@ const { NB_REPEAT, NB_ITER, VERBOSE } = parseArgs();
 async function main() {
 
   // Init args
-  const { exports, memory } = await initWasm('gimli/prog/gimli_wasm.wasm');
+  const { exports, memory } = await initWasm(__dirname, 'gimli_wasm.wasm');
   const fn = exports.gimli;
 
   const state_ptr = 50000;

@@ -21,9 +21,9 @@ function parseArgs() {
 
 
 // Init Wasm module
-async function initWasm(wasmRelativePath) {
+async function initWasm(dir, filename) {
 
-  const wasmPath = path.join(process.cwd(), wasmRelativePath);
+  const wasmPath = path.resolve(dir, 'prog', filename);
   const wasmBuffer = fs.readFileSync(wasmPath);
 
   const memory = new WebAssembly.Memory({ initial: 1024 });

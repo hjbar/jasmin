@@ -56,24 +56,24 @@ COMPILER_DIR=$(dirname "$ROOT_DIR")
 LOG_DIR="$ROOT_DIR/logs"
 LATEX_DIR="$ROOT_DIR/latex"
 
-GIMLI="$ROOT_DIR/gimli"
+GIMLI="gimli"
 
-SHA256="$ROOT_DIR/sha256"
-SHA256_OPT="$ROOT_DIR/sha256-opt"
+SHA256="sha256"
+SHA256_OPT="sha256-opt"
 
-CHACHA20="$ROOT_DIR/chacha20"
-CHACHA20_OPT="$ROOT_DIR/chacha20-opt"
+CHACHA20="chacha20"
+CHACHA20_OPT="chacha20-opt"
 
-CHACHA20AVX="$ROOT_DIR/chacha20avx"
-CHACHA20AVX_OPT="$ROOT_DIR/chacha20avx-opt"
+CHACHA20AVX="chacha20avx"
+CHACHA20AVX_OPT="chacha20avx-opt"
 
-CHACHA20XOR="$ROOT_DIR/chacha20xor"
-CHACHA20XOR_OPT="$ROOT_DIR/chacha20xor-opt"
+CHACHA20XOR="chacha20xor"
+CHACHA20XOR_OPT="chacha20xor-opt"
 
-CHACHA20XORAVX="$ROOT_DIR/chacha20xoravx"
-CHACHA20XORAVX_OPT="$ROOT_DIR/chacha20xoravx-opt"
+CHACHA20XORAVX="chacha20xoravx"
+CHACHA20XORAVX_OPT="chacha20xoravx-opt"
 
-SCRIPTS=(
+DIRNAMES=(
   "$GIMLI"
   "$SHA256"         "$SHA256_OPT"
   "$CHACHA20"       "$CHACHA20_OPT"
@@ -104,16 +104,16 @@ bench() {
   clear
 
   # Make sub-log dirs
-  for folder in "${SCRIPTS[@]}"; do
-    mkdir -p "$folder/logs"
+  for dir_name in "${DIRNAMES[@]}"; do
+    mkdir -p "$ROOT_DIR/$dir_name/logs"
   done
 
   # Run scripts
-  for folder in "${SCRIPTS[@]}"; do
+  for dir_name in "${DIRNAMES[@]}"; do
     if [ "$ALL" = true ]; then
-      bash bench.sh -a $folder $NB_REPEAT
+      bash "$ROOT_DIR/bench.sh" -a $dir_name $NB_REPEAT
     else
-      bash bench.sh $folder $NB_REPEAT
+      bash "$ROOT_DIR/bench.sh" $dir_name $NB_REPEAT
     fi
   done
 }
@@ -121,9 +121,9 @@ bench() {
 
 # Remove logs
 remove_logs() {
-  for folder in "${SCRIPTS[@]}"; do
-    rm -rf "$folder/logs/log_verbose_"*"_${NB_REPEAT}_"*.txt
-    rm -rf "$folder/logs/log_"*"_${NB_REPEAT}_"*.txt
+  for dir_name in "${DIRNAMES[@]}"; do
+    rm -rf "$ROOT_DIR/$dir_name/logs/log_verbose_"*"_${NB_REPEAT}_"*.txt
+    rm -rf "$ROOT_DIR/$dir_name/logs/log_"*"_${NB_REPEAT}_"*.txt
   done
 
   rm -rf "$LOG_FILE"
@@ -140,10 +140,10 @@ make_logs() {
   echo "" > "$LOG_FILE"
   echo "" > "$LOG_FILE_SHORT"
 
-  for folder in "${SCRIPTS[@]}"; do
+  for dir_name in "${DIRNAMES[@]}"; do
 
     SEARCH="log_verbose_*_${NB_REPEAT}_*.txt"
-    find "$folder/logs" -type f -name "$SEARCH" | sort -t '_' -k 4 -rn | while read -r current_log; do
+    find "$ROOT_DIR/$dir_name/logs" -type f -name "$SEARCH" | sort -t '_' -k 4 -rn | while read -r current_log; do
       {
         echo ""
         echo "$SEP1"
@@ -156,7 +156,7 @@ make_logs() {
     done
 
     SEARCH_SHORT="log_*_${NB_REPEAT}_*.txt"
-    find "$folder/logs" -type f -name "$SEARCH_SHORT" ! -name "$SEARCH" | sort -t '_' -k 4 -rn | while read -r current_log; do
+    find "$ROOT_DIR/$dir_name/logs" -type f -name "$SEARCH_SHORT" ! -name "$SEARCH" | sort -t '_' -k 4 -rn | while read -r current_log; do
       {
         echo ""
         echo "$SEP1"
@@ -174,8 +174,8 @@ make_logs() {
 
 # Remove latex
 remove_latex() {
-  for folder in "${SCRIPTS[@]}"; do
-    rm -rf "$folder/latex/latex_"*"_${NB_REPEAT}_"*.txt
+  for dir_name in "${DIRNAMES[@]}"; do
+    rm -rf "$ROOT_DIR/$dir_name/latex/latex_"*"_${NB_REPEAT}_"*.txt
   done
 
   rm -rf "$LATEX_FILE"
@@ -190,10 +190,10 @@ make_latex() {
   # Make the global latex
   echo "Algorithm name;Is opt algorithm;Ratio wasm-opt -O3 / wasm-opt -O4;Ratio wasm-as / best-wasm-opt;Ratio wasm-as / X86-64;Ratio wasm-opt -O3 / X86-64;Ratio wasm-opt -O4 / X86-64;Ratio best-Wasm / X86-64" > "$LATEX_FILE"
 
-  for folder in "${SCRIPTS[@]}"; do
+  for dir_name in "${DIRNAMES[@]}"; do
 
     SEARCH="latex_*_${NB_REPEAT}_*.txt"
-    find "$folder/latex" -type f -name "$SEARCH" | sort -t '_' -k 4 -rn | while read -r current_latex; do
+    find "$ROOT_DIR/$dir_name/latex" -type f -name "$SEARCH" | sort -t '_' -k 4 -rn | while read -r current_latex; do
       cat "$current_latex" >> "$LATEX_FILE"
     done
 

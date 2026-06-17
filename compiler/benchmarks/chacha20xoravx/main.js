@@ -6,7 +6,7 @@ const { mainChachaXor } = require('../utils/chacha20xor_shared');
 // Main function
 async function main() {
 
-  const { exports, memory } = await initWasm('chacha20xoravx/prog/chacha20xoravx_wasm.wasm');
+  const { exports, memory } = await initWasm(__dirname, 'chacha20xoravx_wasm.wasm');
   const fn = exports.jade_stream_chacha_chacha20_amd64_avx_xor;
   mainChachaXor(memory, fn, withBigInt = true);
 
