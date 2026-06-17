@@ -1,10 +1,5 @@
 open Prog
-
-(* -------------------------------------------------------------------- *)
-
-module Core = CoreArchFactory.Core_arch_WASM
-module Arch = Arch_full.Arch_from_Core_arch_wasm (Core)
-let pointer_data = Arch.pointer_data
+open Wasm_utils
 
 (* -------------------------------------------------------------------- *)
 
@@ -34,6 +29,8 @@ let simplify : 'len gexpr -> 'len gexpr = function
     Papp1 (Oword_of_int desired, Pconst z)
   | Papp1 (Ozeroext (desired, base), Papp1 (Ozeroext (desired', base'), expr)) when base = desired' && desired <=@ base' ->
     Papp1 (Ozeroext (desired, base'), expr)
+  | Papp1 (Oword_of_int desired, Papp1 (Oint_of_word (_sign, base), expr)) when desired = base ->
+    expr
   | _ as expr -> expr
 
 let ext_op ~(desired : 'len gty) ~(base : 'len gty) (expr : 'len gexpr) : 'len gexpr =
@@ -49,19 +46,33 @@ let ext_op ~(desired : 'len gty) ~(base : 'len gty) (expr : 'len gexpr) : 'len g
     | U U128, U U128
     | U U256, U U256 -> expr
     | U desired, U base -> simplify (Papp1 (Ozeroext (desired, base), expr))
+    | U desired, Int -> simplify (Papp1 (Oword_of_int desired, expr))
     | _, _ -> assert false
   end
+  | Arr (ws1, len1), Arr (ws2, len2) when ws1 = ws2 && len1 = len2 -> expr
   | _, _ -> assert false
 
 (* -------------------------------------------------------------------- *)
 
-let rec explicit_expr (desired : 'len gty) (expr : 'len gexpr) : 'len gexpr =
-  match expr with
-  | Pconst _z -> expr
-  | Pvar ggvar ->
+let rec explicit_expr (desired : 'len gty) : 'len gexpr -> 'len gexpr = function
+  | Pconst _z as expr ->
+    let base = Bty Int in
+
+    ext_op ~desired ~base expr
+  | Pvar ggvar as expr ->
     let base = ggvar.gv.pl_desc.v_ty in
 
     ext_op ~desired ~base expr
+  | Pget (aligned, access, wsize, ggvar, index) as expr ->
+    let base = Typing.ty_expr pointer_data Location.i_dummy expr in
+    let index = explicit_expr (Bty (U pointer_data)) index in
+
+    ext_op ~desired ~base (Pget (aligned, access, wsize, ggvar, index))
+  | Psub (access, wsize, len, ggvar, index) as expr ->
+    let base = Typing.ty_expr pointer_data Location.i_dummy expr in
+    let index = explicit_expr (Bty (U pointer_data)) index in
+
+    ext_op ~desired ~base (Psub (access, wsize, len, ggvar, index))
   | Pload (aligned, wsize, addr) ->
     let base = wsize_to_gty wsize in
     let addr = explicit_expr (wsize_to_gty pointer_data) addr in
@@ -90,9 +101,7 @@ let rec explicit_expr (desired : 'len gty) (expr : 'len gexpr) : 'len gexpr =
 
     ext_op ~desired ~base (Pif (base, cond, then_, else_))
   | Pbool _
-  | Parr_init _
-  | Pget _
-  | Psub _ -> assert false
+  | Parr_init _ -> assert false
 
 and explicit_exprs (gtys : 'len gty list) (es : 'len gexpr list) : 'len gexpr list =
   List.map2 explicit_expr gtys es
@@ -100,13 +109,17 @@ and explicit_exprs (gtys : 'len gty list) (es : 'len gexpr list) : 'len gexpr li
 (* -------------------------------------------------------------------- *)
 
 let explicit_glval : 'len glval -> 'len glval = function
+  | Lnone _
+  | Lvar _ as glval -> glval
   | Lmem (align, wsize, loc, addr) ->
     let addr = explicit_expr (wsize_to_gty pointer_data) addr in
     Lmem (align, wsize, loc, addr)
-  | Lnone _
-  | Lvar _ as glval -> glval
-  | Laset _
-  | Lasub _ -> assert false
+  | Laset (align, access, wsize, igvar, index) ->
+    let index = explicit_expr (Bty (U pointer_data)) index in
+    Laset (align, access, wsize, igvar, index)
+  | Lasub (access, wsize, len, igvar, gexpr) ->
+    let gexpr = explicit_expr (Bty (U pointer_data)) gexpr in
+    Lasub (access, wsize, len, igvar, gexpr)
 
 let explicit_glvals (glvals : 'len glval list) : 'len glval list =
   List.map explicit_glval glvals

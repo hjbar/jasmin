@@ -73,6 +73,11 @@ function parseInputs() {
       return val;
     }
 
+    // Special case for GC001
+    if (rawPath.includes('gc001')) {
+      return val;
+    }
+
     // Common cases
     if (size === 32) {
 
@@ -404,6 +409,28 @@ async function runWasm(path, size, args) {
 
       const outputArray = new Uint8Array(memory.buffer, outPtr, len);
       console.log(Buffer.from(outputArray).toString('hex'));
+
+      return;
+    }
+
+    // Special case for GC001
+    if (path.includes('gc001')) {
+      const x = parseInt(process.argv[5], 10);
+
+      const exports = instance.exports;
+      const new_array_i8  = exports.new_array_i8;
+      const new_array_i16 = exports.new_array_i16;
+      const new_array_i32 = exports.new_array_i32;
+      const new_array_i64 = exports.new_array_i64;
+
+      t1 = new_array_i8(0, 32);
+      t2 = new_array_i16(0, 16);
+      t3 = new_array_i32(0, 8);
+      t4 = new_array_i64(BigInt(0), 4);
+
+      [ t1, t2, t3, t4, res ] = instance.exports.main_test(t1, t2, t3, t4, x);
+
+      console.log(res);
 
       return;
     }

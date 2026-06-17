@@ -118,6 +118,11 @@ int main(int argc, char *argv[]) {
       continue;
     }
 
+    // Special case for GC001
+    if (strstr(argv[0], "gc001") != NULL) {
+      continue;
+    }
+
     // Common cases
     if (size == 32) {
 
@@ -385,6 +390,27 @@ int main(int argc, char *argv[]) {
     printf("\n");
 
     free(out);
+    return 0;
+  }
+
+  // Special case for GC001
+  if (strstr(argv[0], "gc001") != NULL) {
+    long val = strtol(argv[3], &endptr, 10);
+    if (errno == ERANGE || val < INT32_MIN || val > INT32_MAX || *endptr != '\0') {
+      fprintf(stderr, "Error: '%s' is not a valid 32-bit int.\n", argv[3]);
+      return 1;
+    }
+    uint32_t x = (uint32_t)val;
+
+    uint8_t  t1[32] = {0};
+    uint16_t t2[16] = {0};
+    uint32_t t3[ 8] = {0};
+    uint64_t t4[ 4] = {0};
+
+    uintptr_t func_ptr = (uintptr_t)main_test;
+    res = ((uint32_t (*)(uint8_t*, uint16_t*, uint32_t*, uint64_t*, uint32_t))func_ptr)(t1, t2, t3, t4, x);
+
+    printf("%" PRId32 "\n", (int32_t)res);
     return 0;
   }
 

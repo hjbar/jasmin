@@ -38,9 +38,9 @@ let pp_ptr_kind_init fmt pki =
       (if sc = Sglob then "global" else "stack")
       pp_var (Conv.var_of_cvar v)
       pp_slice cs
-  | PIregptr v ->
-    Format.fprintf fmt "reg ptr %a"
-      pp_var (Conv.var_of_cvar v)
+  | PIregptr (v, rf) ->
+    Format.fprintf fmt "%s reg ptr %a"
+      (if rf then "#[ref]" else "") pp_var (Conv.var_of_cvar v)
   | PIstkptr (v, cs, x) ->
     Format.fprintf fmt "stack ptr %a %a (pseudo-reg %a)"
       pp_var_ty (Conv.var_of_cvar v)
@@ -121,6 +121,7 @@ let memory_analysis pp_sr pp_err ~debug up =
       Stack_alloc.({
         pp_ptr = Conv.cvar_of_var pi.pi_ptr;
         pp_writable = pi.pi_writable;
+        pp_ref      = pi.pi_ref;
         pp_align    = pi.pi_align.ac_strict;
       }) in
     let conv_sub (i:Interval.t) =
@@ -128,7 +129,7 @@ let memory_analysis pp_sr pp_err ~debug up =
                     cs_len = Conv.cz_of_int (Interval.size i) } in
     let conv_ptr_kind x = function
       | Varalloc.Direct (s, i, sc) -> Stack_alloc.PIdirect (Conv.cvar_of_var s, conv_sub i, sc)
-      | RegPtr s                   -> Stack_alloc.PIregptr(Conv.cvar_of_var s)
+      | RegPtr (s, rf)             -> Stack_alloc.PIregptr(Conv.cvar_of_var s, rf)
       | StackPtr s                 ->
         let xp = V.clone x in
         Stack_alloc.PIstkptr(Conv.cvar_of_var s,

@@ -448,7 +448,8 @@ let compile (type reg regx xreg rflag cond asm_op extra_op)
 module Core = CoreArchFactory.Core_arch_WASM
 module Arch = Arch_full.Arch_from_Core_arch_wasm (Core)
 
-let compiler_back_end ~(mod_name : Wasm_ast.name) (sprog : ('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op Expr._sprog) : Wasm_ast.wasm_module =
+let compiler_back_end ~(mod_name : Wasm_ast.name) (sprog : ('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op Expr._sprog)
+  : Wasm_ast.wasm_module * Wasm_headers.wasm_headers =
   if !debug then begin
     Format.eprintf "/* -------------------------------------------------------------------- */@.";
     Format.eprintf "/* START WASM back_end */@."
@@ -462,7 +463,7 @@ let compiler_back_end ~(mod_name : Wasm_ast.name) (sprog : ('reg, 'regx, 'xreg, 
     Format.eprintf "/* START make cast explicit */@."
   end;
 
-  let sprog = Explicit_cast.make_explicit sprog in
+  let ((funcs, _) as sprog) = Explicit_cast.make_explicit sprog in
 
   if !debug then begin
     Format.fprintf Format.std_formatter "%a\n%!" (Printer.pp_sprog ~debug:!debug Arch.pointer_data Arch.msf_size Arch.asmOp) sprog;
@@ -483,9 +484,11 @@ let compiler_back_end ~(mod_name : Wasm_ast.name) (sprog : ('reg, 'regx, 'xreg, 
   let rip_addr = Z.of_int 10000 in
 
   let compiled_prog = Jasmin_to_wasm.compile_prog ~mod_name ~mem_env ~mem_name ~mem_min ~import_env ~rip_addr sprog in
+  let headers = Wasm_headers.compute_headers funcs in
 
   if !debug then begin
-    Format.fprintf Format.std_formatter "%a\n%!" Pp_wasm_ast.pp_module compiled_prog;
+    let pp_module fmt = Pp_wasm_ast.pp_module fmt headers in
+    Format.fprintf Format.std_formatter "%a\n%!" pp_module compiled_prog;
     Format.eprintf "/* END jasmin to wasm */@.";
     Format.eprintf "/* -------------------------------------------------------------------- */@."
   end;
@@ -496,4 +499,4 @@ let compiler_back_end ~(mod_name : Wasm_ast.name) (sprog : ('reg, 'regx, 'xreg, 
     Format.eprintf "/* -------------------------------------------------------------------- */@."
   end;
 
-  compiled_prog
+  compiled_prog, headers

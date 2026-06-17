@@ -1,5 +1,6 @@
 open Format
 open Wasm_ast
+open Wasm_headers
 
 (* -------------------------------------------------------------------- *)
 
@@ -21,6 +22,12 @@ let is_visible = function Return [] -> false | _ -> true
 let pp_sep_simple_space fmt () = fprintf fmt " "
 
 let pp_sep_double_space fmt () = fprintf fmt "@ @ "
+
+let pp_raw (fmt : formatter) (str : string) : unit =
+  let str = String.trim str in
+  if str <> "" then
+    let lines = String.split_on_char '\n' str in
+    pp_print_list ~pp_sep:(fun fmt () -> fprintf fmt "@\n") pp_print_string fmt lines
 
 (* -------------------------------------------------------------------- *)
 
@@ -62,13 +69,16 @@ let pp_size (fmt : formatter) (size : size) : unit =
 
 let pp_ty (fmt : formatter) (ty : ty) : unit =
   match ty with
-  | I32 -> fprintf fmt "i32"
-  | I64 -> fprintf fmt "i64"
+  | I32  -> fprintf fmt "i32"
+  | I64  -> fprintf fmt "i64"
   | V128 -> fprintf fmt "v128"
   | Simd I8x16 -> fprintf fmt "i8x16"
   | Simd I16x8 -> fprintf fmt "i16x8"
   | Simd I32x4 -> fprintf fmt "i32x4"
   | Simd I64x2 -> fprintf fmt "i64x2"
+  | Extra I8  -> fprintf fmt "i8"
+  | Extra I16 -> fprintf fmt "i16"
+  | Ref name -> fprintf fmt "(ref $%a)" pp_name name
 
 (* -------------------------------------------------------------------- *)
 
@@ -195,19 +205,8 @@ let rec pp_instr (fmt : formatter) (instr : instr) : unit =
       pp_ty simd_ty
       pp_nums nums
   | Const _ -> failwith "Instruction not well-formed"
-  | Get (scope, var) ->
-    fprintf fmt "(%a.get $%a)"
-      pp_scope scope
-      pp_var var
-  | Set (scope, var, Some instr) ->
-    fprintf fmt "@[<hv 2>(%a.set $%a@ %a)@]"
-      pp_scope scope
-      pp_var var
-      pp_instr instr
-  | Set (scope, var, None) ->
-    fprintf fmt "(%a.set $%a)"
-      pp_scope scope
-      pp_var var
+  | Get (access, scope, var) -> pp_get fmt access scope var
+  | Set (access, scope, var, instr_opt) -> pp_set fmt access scope var instr_opt
   | Load (ty, None, None, instr) ->
     fprintf fmt "(%a.load %a)"
       pp_ty ty
@@ -266,6 +265,63 @@ and pp_instrs (fmt : formatter) (instrs : instrs) : unit =
   instrs
   |> List.filter is_visible
   |> pp_print_list ~pp_sep:pp_print_space pp_instr fmt
+
+and pp_get (fmt : formatter) (access : access) (scope : scope) (var : var) : unit =
+  match access with
+  | VarAccess ->
+    fprintf fmt "(%a.get $%a)"
+      pp_scope scope
+      pp_var var
+  | ArrayAccess (ref_ty, instr) ->
+    fprintf fmt "(array.get $%a (%a.get $%a) %a)"
+      pp_name ref_ty
+      pp_scope scope
+      pp_var var
+      pp_instr instr
+  | StructAccess (ref_ty, field_name) ->
+    fprintf fmt "(struct.get $%a $%a (%a.get $%a))"
+      pp_name ref_ty
+      pp_name field_name
+      pp_scope scope
+      pp_var var
+
+and pp_set (fmt : formatter) (access : access) (scope : scope) (var : var) (instr_opt : instr option) : unit =
+  match access, instr_opt with
+  | VarAccess, None ->
+    fprintf fmt "(%a.set $%a)"
+      pp_scope scope
+      pp_var var
+  | VarAccess, Some instr ->
+    fprintf fmt "@[<hv 2>(%a.set $%a@ %a)@]"
+      pp_scope scope
+      pp_var var
+      pp_instr instr
+  | ArrayAccess (ref_ty, idx), None ->
+    fprintf fmt "(array.set $%a (%a.get $%a) %a)"
+      pp_name ref_ty
+      pp_scope scope
+      pp_var var
+      pp_instr idx
+  | ArrayAccess (ref_ty, idx), Some instr ->
+    fprintf fmt "@[<hv 2>(array.set $%a (%a.get $%a) %a@ %a)@]"
+      pp_name ref_ty
+      pp_scope scope
+      pp_var var
+      pp_instr idx
+      pp_instr instr
+  | StructAccess (ref_ty, field_name), None ->
+    fprintf fmt "(struct.set $%a $%a (%a.get %a))"
+      pp_name ref_ty
+      pp_name field_name
+      pp_scope scope
+      pp_var var
+  | StructAccess (ref_ty, field_name), Some instr ->
+    fprintf fmt "@[<hv 2>(struct.set $%a $%a (%a.get %a)@ %a)@]"
+      pp_name ref_ty
+      pp_name field_name
+      pp_scope scope
+      pp_var var
+      pp_instr instr
 
 (* -------------------------------------------------------------------- *)
 
@@ -363,6 +419,27 @@ let pp_datas (fmt : formatter) (datas : data list) : unit =
 
 (* -------------------------------------------------------------------- *)
 
+let pp_field (fmt : formatter) ((name, mut, ty) : field) : unit =
+  match mut with
+  | Mutable -> fprintf fmt "(field $%a (mut %a))" pp_name name pp_ty ty
+  | Immutable -> fprintf fmt "(field $%a %a)" pp_name name pp_ty ty
+
+let pp_kind (fmt : formatter) : ref_kind -> unit = function
+  | Array (Mutable, ty) -> fprintf fmt "(array (mut %a))" pp_ty ty
+  | Array (Immutable, ty) -> fprintf fmt "(array %a)" pp_ty ty
+  | Struct fields -> pp_print_list ~pp_sep:pp_sep_simple_space pp_field fmt fields
+
+let pp_decl (fmt : formatter) ({ decl_name; decl_kind } : decl) : unit =
+  fprintf fmt "(type $%a %a)"
+    pp_name decl_name
+    pp_kind decl_kind
+
+let pp_decls (fmt : formatter) (decls : decl list) : unit =
+  fprintf fmt "@[<v>%a@]"
+    (pp_print_list ~pp_sep:pp_print_space pp_decl) decls
+
+(* -------------------------------------------------------------------- *)
+
 let pp_init (fmt : formatter) (func : func option) : unit =
   match func with
   | None -> ()
@@ -388,30 +465,67 @@ let pp_start (fmt : formatter) (funname : funname option) : unit =
 
 (* -------------------------------------------------------------------- *)
 
-let pp_module (fmt : formatter) (wasm_mod : wasm_module) : unit =
-  let { mod_name; mod_mems; mod_imports; mod_datas; mod_funcs; mod_init; mod_exports; mod_start } = wasm_mod in
+let pp_module (fmt : formatter) (headers : wasm_headers) (wasm_mod : wasm_module) : unit =
+  let { mod_name; mod_mems; mod_imports; mod_datas; mod_decls; mod_funcs; mod_init; mod_exports; mod_start } = wasm_mod in
+  let { mem_header; import_header; data_header; decl_header; func_header; init_header; export_header; start_header } = headers in
 
   fprintf fmt "@[<v 2>(module $%a" pp_name mod_name;
+
 
   if mod_mems <> [] then
     fprintf fmt "@\n@ %a" pp_mems mod_mems;
 
+  if mem_header <> "" then
+    fprintf fmt "@ %a" pp_raw mem_header;
+
+
   if mod_imports <> [] then
     fprintf fmt "@\n@ %a" pp_imports mod_imports;
+
+  if import_header <> "" then
+    fprintf fmt "@ %a" pp_raw import_header;
+
 
   if mod_datas <> [] then
     fprintf fmt "@\n@ %a" pp_datas mod_datas;
 
+  if data_header <> "" then
+    fprintf fmt "@ %a" pp_raw data_header;
+
+
+  if mod_decls <> [] then
+    fprintf fmt "@\n@ %a" pp_decls mod_decls;
+
+  if decl_header <> "" then
+    fprintf fmt "@ %a" pp_raw decl_header;
+
+
   if mod_funcs <> [] then
     fprintf fmt "@\n@ %a" pp_funcs mod_funcs;
+
+  if func_header <> "" then
+    fprintf fmt "@\n@ %a" pp_raw func_header;
+
 
   if mod_init <> None then
     fprintf fmt "@\n@ %a" pp_init mod_init;
 
+  if init_header <> "" then
+    fprintf fmt "@\n@ %a" pp_raw init_header;
+
+
   if mod_exports <> [] then
     fprintf fmt "@\n@ %a" pp_exports mod_exports;
 
+  if export_header <> "" then
+    fprintf fmt "@ %a" pp_raw export_header;
+
+
   if mod_start <> None then
     fprintf fmt "@\n@ %a" pp_start mod_start;
+
+  if start_header <> "" then
+    fprintf fmt "@ %a" pp_raw start_header;
+
 
   fprintf fmt "@]@\n@\n)"

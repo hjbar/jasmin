@@ -50,7 +50,12 @@ CHACHA20XOR_OPT="$ROOT_DIR/chacha20xor-opt"
 CHACHA20XORAVX="$ROOT_DIR/chacha20xoravx"
 CHACHA20XORAVX_OPT="$ROOT_DIR/chacha20xoravx-opt"
 
-FILES_32=("$GIMLI")
+GC001="$ROOT_DIR/gc001"
+
+FILES_32=(
+  "$GIMLI"
+  "$GC001"
+)
 FILES_64=(
   "$SHA256"         "$SHA256_OPT"
   "$CHACHA20"       "$CHACHA20_OPT"
@@ -444,6 +449,11 @@ run_tests "$CHACHA20XOR" 64 4 "${VALUES[@]}"
 run_tests "$CHACHA20XOR_OPT" 64 4 "${VALUES[@]}"
 run_tests "$CHACHA20XORAVX" 64 4 "${VALUES[@]}"
 run_tests "$CHACHA20XORAVX_OPT" 64 4 "${VALUES[@]}"
+
+
+# GC001
+VALUES=(0 1 10 42 100 -1 -10 -42 -100)
+run_tests "$GC001" 32 1 "${VALUES[@]}"
 
 
 # Remove build files

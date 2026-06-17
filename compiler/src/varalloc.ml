@@ -20,13 +20,14 @@ let no_alignment_constraint = { ac_strict = U8; ac_heuristic = U8 }
 type param_info = {
   pi_ptr      : var;
   pi_writable : bool;
+  pi_ref      : bool;
   pi_align    : alignment_constraint;
 }
 
 type ptr_kind =
   | Direct   of var * Interval.interval * E.v_scope
   | StackPtr of var
-  | RegPtr   of var
+  | RegPtr   of var * bool
 
 type stk_alloc_oracle_t =
   { sao_calls  : Sf.t
@@ -267,7 +268,8 @@ let init_slots pd stack_pointers alias coloring fv =
       add_local v (StackPtr slot)
     | Reg (k, Pointer _) ->
       let p = V.mk v.v_name (Reg(k, Direct)) (tu pd) v.v_dloc v.v_annot in
-      add_local v (RegPtr p)
+      let rf = Annotations.has_symbol "ref" v.v_annot in
+      add_local v (RegPtr (p, rf))
     | _ -> () in
 
   Sv.iter dovar fv;
@@ -287,11 +289,12 @@ let all_alignment pd (ctbl: alignment) alias params lalloc : param_info option l
       assert (V.equal x c.in_var && c.scope = E.Slocal);
       let pi_ptr =
         match Hv.find lalloc x with
-        | RegPtr p -> p
+        | RegPtr (p, _rf) -> p
         | _ | exception Not_found -> assert false in
       let pi_writable = w = Writable in
+      let pi_ref = Annotations.has_symbol "ref" x.v_annot in
       let pi_align = get_align c in
-      Some { pi_ptr; pi_writable; pi_align }
+      Some { pi_ptr; pi_writable; pi_ref; pi_align }
     | _ -> assert false in
   let params = List.map doparam params in
 

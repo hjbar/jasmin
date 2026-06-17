@@ -209,16 +209,17 @@ let main () =
       | Utils0.Ok asm ->
         let mod_name = Filename.remove_extension !outfile in
         let mod_name = if String.is_empty mod_name then "jasmin" else mod_name in
-        let prog = Compile_wasm.compiler_back_end ~mod_name asm in
+        let prog, headers = Compile_wasm.compiler_back_end ~mod_name asm in
+        let pp_module fmt = Pp_wasm_ast.pp_module fmt headers in
 
         if !outfile <> "" then begin
           BatFile.with_file_out !outfile (fun out ->
             let fmt = BatFormat.formatter_of_out_channel out in
-            Format.fprintf fmt "%a%!" Pp_wasm_ast.pp_module prog);
+            Format.fprintf fmt "%a%!" pp_module prog);
           if !debug then Format.eprintf "assembly listing written@."
         end
         else if List.mem Compiler_wasm.Assembly (List.map Compile_utils.to_wasm_step !print_list) then
-          Format.printf "%a%!" Pp_wasm_ast.pp_module prog
+          Format.printf "%a%!" pp_module prog
       end
     end
     else begin

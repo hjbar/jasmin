@@ -374,8 +374,9 @@ Record concrete_slice := {
        a stack slot (if sc = Slocal) or a global slot (if sc = Sglob);
        [x] is the name of the region, [cs] is the slice of the region where
        the slot is.
-   - PIregptr p:
-       a reg ptr, [p] is the name of the pointer to use in the target program.
+   - PIregptr p rf:
+       a reg ptr, [p] is the name of the pointer to use in the target program,
+       [rf] if is a reference or not.
    - PIstkptr x cs xp:
        a stack ptr,
        [x] is the name of the region where the pointer lies, [cs] is the slice
@@ -395,14 +396,14 @@ Record concrete_slice := {
 *)
 Variant ptr_kind_init :=
 | PIdirect of var & concrete_slice & v_scope
-| PIregptr of var
+| PIregptr of var & bool
 | PIstkptr of var & concrete_slice & var.
 
 (* [ptr_kind] is [ptr_kind_init] with one more piece of information,
    the offset of the region (in cases [Pdirect] and [Pstkptr]). *)
 Variant ptr_kind :=
 | Pdirect of var & Z & wsize & concrete_slice & v_scope
-| Pregptr of var
+| Pregptr of var & bool (* the pointer and if it is a reference or not *)
 | Pstkptr of var & Z & wsize & concrete_slice & var.
 
 Variant vptr_kind :=
@@ -410,6 +411,24 @@ Variant vptr_kind :=
 | VKptr  of ptr_kind.
 
 Definition var_kind := option vptr_kind.
+
+Definition is_ref_pk (pk : ptr_kind) : bool :=
+  match pk with
+  | Pregptr _ rf => rf
+  | _ => false
+  end.
+
+Definition is_ref_vpk (vpk : vptr_kind) : bool :=
+  match vpk with
+  | VKglob _ => false
+  | VKptr pk => is_ref_pk pk
+  end.
+
+Definition is_ref_vk (vk : var_kind) : bool :=
+  match vk with
+  | None => false
+  | Some vpk => is_ref_vpk vpk
+  end.
 
 Record pos_map := {
   vrip    : var; (* the variable containing rip (used for globals) *)
@@ -429,6 +448,7 @@ Record pos_map := {
 Record param_info := {
   pp_ptr      : var; (* the name of the pointer to use in the target *)
   pp_writable : bool; (* whether the pointer is writable *)
+  pp_ref      : bool; (* whether the pointer is a reference, for Wasm purposes *)
   pp_align    : wsize; (* the minimal alignment of the pointed memory zone *)
 }.
 
@@ -946,6 +966,21 @@ Definition get_var_kind x :=
   else
     ok (omap VKptr (get_local xv)).
 
+Definition is_ref_e (e : pexpr) : cexec bool :=
+  let x_opt :=
+    match e with
+    | Pvar x
+    | Psub _ _ _ x _ => Some x
+    | _ => None
+    end
+  in
+  match x_opt with
+  | None => ok false
+  | Some x =>
+    Let vk := get_var_kind x in
+    ok (is_ref_vk vk)
+  end.
+
 Definition check_diff (x:var_i) :=
   if Sv.mem x pmap.(vnew) then
     Error (stk_ierror_basic x "the code writes to one of the new variables")
@@ -971,7 +1006,7 @@ Definition base_ptr sc :=
 Definition addr_from_pk (x:var_i) (pk:ptr_kind) :=
   match pk with
   | Pdirect _ ofs _ cs sc => ok (with_var x (base_ptr sc), ofs + cs.(cs_ofs))
-  | Pregptr p             => ok (with_var x p,             0)
+  | Pregptr p rf          => ok (with_var x p,             0)
   | Pstkptr _ _ _ _ _     =>
     Error (stk_error x (pp_box [::
       pp_var x; pp_s "is a stack ptr, it should not appear in a sub-expression"]))
@@ -1004,8 +1039,11 @@ Fixpoint alloc_e (e:pexpr) ty :=
           Let: (sr, status) := get_gsub_region_status rmap xv vpk in
           Let _ := check_valid xv status in
           Let _ := check_align Aligned xv sr ws in
-          Let: (p, ofs) := addr_from_vpk xv vpk in
-          ok (Pload Aligned ws (add (Plvar p) (cast_const ofs)))
+          if is_ref_vpk vpk then
+            ok e
+          else
+            Let: (p, ofs) := addr_from_vpk xv vpk in
+            ok (Pload Aligned ws (add (Plvar p) (cast_const ofs)))
         else Error (stk_ierror_basic xv "invalid type for expression")
       else Error (stk_ierror_basic xv "not a word variable in expression")
     end
@@ -1022,9 +1060,12 @@ Fixpoint alloc_e (e:pexpr) ty :=
       Let: (sr, status) := get_gsub_region_status rmap xv vpk in
       Let _ := check_valid xv status in
       Let _ := check_align al xv sr ws in
-      Let: (p, ofs) := addr_from_vpk xv vpk in
-      let ofs := mk_ofs aa ws e1 ofs in
-      ok (Pload al ws (add (Plvar p) ofs))
+      if is_ref_vpk vpk then
+        ok (Pget al aa ws x e1)
+      else
+        Let: (p, ofs) := addr_from_vpk xv vpk in
+        let ofs := mk_ofs aa ws e1 ofs in
+        ok (Pload al ws (add (Plvar p) ofs))
     end
 
   | Psub aa ws len x e1 =>
@@ -1080,9 +1121,12 @@ Definition alloc_lval (rmap: region_map) (r:lval) (ty:atype) :=
 (*           Let sr   := sub_region_pk x pk in *)
           Let sr := get_sub_region rmap x in
           Let rmap := set_word rmap Aligned sr x Valid ws in
-          Let: (p, ofs) := addr_from_pk x pk in
-          let r := Lmem Aligned ws (v_info p) (add (Plvar p) (cast_const ofs)) in
-          ok (rmap, r)
+          if is_ref_pk pk then
+            ok (rmap, r)
+          else
+            Let: (p, ofs) := addr_from_pk x pk in
+            let r := Lmem Aligned ws (v_info p) (add (Plvar p) (cast_const ofs)) in
+            ok (rmap, r)
         else Error (stk_ierror_basic x "invalid type for assignment")
       else Error (stk_ierror_basic x "not a word variable in assignment")
     end
@@ -1096,10 +1140,13 @@ Definition alloc_lval (rmap: region_map) (r:lval) (ty:atype) :=
     | Some pk =>
       Let: (sr, status) := get_sub_region_status rmap x in
       Let rmap := set_word rmap al sr x status ws in
-      Let: (p, ofs) := addr_from_pk x pk in
-      let ofs := mk_ofs aa ws e1 ofs in
-      let r := Lmem al ws (v_info p) (add (Plvar p) ofs) in
-      ok (rmap, r)
+      if is_ref_pk pk then
+        ok (rmap, Laset al aa ws x e1)
+      else
+        Let: (p, ofs) := addr_from_pk x pk in
+        let ofs := mk_ofs aa ws e1 ofs in
+        let r := Lmem al ws (v_info p) (add (Plvar p) ofs) in
+        ok (rmap, r)
     end
 
   | Lasub aa ws len x e1 =>
@@ -1174,7 +1221,7 @@ Definition regions_are_not_equal (kind:string) x sry sr :=
          pp_nobox [:: pp_s "  "; pp_sr sr];
          pp_s "regions are not equal"]]).
 
-(* Precondition is_aarr ty *)
+(* Precondition is_aarr ty and e is not a wasm reference *)
 Definition alloc_array_move table rmap r tag e :=
   Let: (table, sry, statusy, mk, ey, ofs) :=
     match e with
@@ -1221,7 +1268,7 @@ Definition alloc_array_move table rmap r tag e :=
         in
         let rmap := set_move rmap x sry statusy in (* TODO: we always do set_move -> factorize *)
         ok (table, rmap, nop)
-      | Pregptr p =>
+      | Pregptr p false =>
         let rmap := set_move rmap x sry statusy in (* TODO: we always do set_move -> factorize *)
         Let ir := get_addr x (Lvar (with_var x p)) tag mk ey ofs in
         ok (table, rmap, ir)
@@ -1238,6 +1285,7 @@ Definition alloc_array_move table rmap r tag e :=
           let dx := Lmem Aligned Uptr (v_info rsp) (add (Plvar rsp) dx_ofs) in
           Let ir := get_addr x dx tag mk ey ofs in
           ok (table, rmap, ir)
+      | Pregptr _ true => Error (stk_error x (pp_s "wasm reference not expected"))
       end
     end
   | Lasub aa ws len x e =>
@@ -1247,6 +1295,7 @@ Definition alloc_array_move table rmap r tag e :=
        if ofs = 0 and len = full len. *)
     match get_local (v_var x) with
     | None   => Error (stk_ierror_basic x "register array remains")
+    | Some (Pregptr _ true) => Error (stk_error x (pp_s "wasm reference not expected"))
     | Some _ =>
       Let: (sr, status) := get_sub_region_status rmap x in
       Let: (table, e) := get_symbolic_of_pexpr table e in
@@ -1285,7 +1334,7 @@ Definition alloc_protect_ptr rmap ii r t e msf :=
       match vk with
       | None => Error (stk_ierror_basic yv "register array remains")
       | Some vpk =>
-        Let _ := assert (if vpk is VKptr (Pregptr _) then true else false)
+        Let _ := assert (if vpk is VKptr (Pregptr _ _) then true else false)
                         (stk_error_no_var "argument of protect_ptr should be a reg ptr") in
         Let: (sr, status) := get_gsub_region_status rmap yv vpk in
         Let: (e, _ofs) := addr_from_vpk_pexpr rmap yv vpk in (* ofs is ensured to be 0 *)
@@ -1298,17 +1347,18 @@ Definition alloc_protect_ptr rmap ii r t e msf :=
   in
 
   match r with
-  | Lvar x => 
+  | Lvar x =>
     match get_local x with
     | None => Error (stk_ierror_basic x "register array remains")
     | Some pk =>
       match pk with
-      | Pregptr p =>
+      | Pregptr p false =>
         Let msf := add_iinfo ii (alloc_e rmap msf ty_msf) in
         let rmap := set_move rmap x sry statusy in
         let dx := Lvar (with_var x p) in
         Let ir := lower_protect_ptr_fail ii [::dx] t [:: ey; msf] in
         ok (rmap, ir)
+      | Pregptr _ true => Error (stk_error x (pp_s "cannot protect wasm reference"))
       | _ => Error (stk_error_no_var "only reg ptr can receive the result of protect_ptr")
       end
     end
@@ -1318,11 +1368,76 @@ Definition alloc_protect_ptr rmap ii r t e msf :=
   | _ => Error (stk_ierror_no_var "alloc_array_move: variable/subarray expected (x)")
   end.
 
+(* Precondition is_aarr ty and e is a wasm reference *)
+Definition alloc_array_move_ref table rmap r tag ty e :=
+  Let: (table, sry, statusy) :=
+    match e with
+    | Pvar y =>
+      let yv := y.(gv) in
+      Let vk := get_var_kind y in
+      match vk with
+      | None => Error (stk_ierror_basic yv "register array remains")
+      | Some vpk =>
+        Let: (sr, status) := get_gsub_region_status rmap yv vpk in
+        ok (table, sr, status)
+      end
+    | Psub aa ws len y e1 =>
+      let yv := y.(gv) in
+      Let vk := get_var_kind y in
+      match vk with
+      | None => Error (stk_ierror_basic yv "register array remains")
+      | Some vpk =>
+        Let: (sr, status) := get_gsub_region_status rmap yv vpk in
+        Let: (table, se1) := get_symbolic_of_pexpr table e1 in
+        let ofs := mk_ofs_int aa ws se1 in
+        let len := Sconst (arr_size ws len) in
+        let (sr, status) := sub_region_status_at_ofs yv sr status ofs len in
+        ok (table, sr, status)
+      end
+    | _ => Error (stk_ierror_no_var "alloc_array_move: variable/subarray expected (y)")
+    end
+  in
+
+  match r with
+  | Lvar x =>
+    match get_local x with
+    | None => Error (stk_ierror_basic x "register array remains")
+    | Some (Pregptr _ true) =>
+      let rmap := set_move rmap x sry statusy in
+      let ir := Cassgn r tag ty e in
+      ok (table, rmap, ir)
+    | Some _ => Error (stk_error x (pp_s "wasm reference expected"))
+    end
+  | Lasub aa ws len x e =>
+    (* TODO: can we clean/refactor?
+       We call sub_region_status_at_ofs but just need the region.
+       And both sub_region_status_at_ofs and set_move make a test to check
+       if ofs = 0 and len = full len. *)
+    match get_local (v_var x) with
+    | None   => Error (stk_ierror_basic x "register array remains")
+    | Some (Pregptr _ true) =>
+      Let: (sr, status) := get_sub_region_status rmap x in
+      Let: (table, e) := get_symbolic_of_pexpr table e in
+      let ofs := mk_ofs_int aa ws e in
+      let len := Sconst (arr_size ws len) in
+      let (sr', _) := sub_region_status_at_ofs x sr status ofs len in
+      Let _ :=
+        assert (sry == sr')
+               (regions_are_not_equal "sub-array" x sry sr')
+      in
+      let rmap := set_move_sub rmap sr.(sr_region) x status ofs len statusy in
+      ok (table, rmap, nop)
+    | Some _ => Error (stk_error x (pp_s "wasm reference expected"))
+    end
+
+  | _ => Error (stk_ierror_no_var "alloc_array_move: variable/subarray expected (x)")
+  end.
+
 (* invariant: all local Pdirect are in the rmap *)
 (* With set_move, we needlessly update the var_region part of rmap
    with "x -> sr", which is already true.
    But this allows to reuse set_move and its proof. *)
-Definition alloc_array_move_init table rmap r tag e :=
+Definition alloc_array_move_init table rmap r tag ty e :=
   if is_array_init e then
     match r with
     | Lvar x =>
@@ -1331,7 +1446,10 @@ Definition alloc_array_move_init table rmap r tag e :=
       ok (table, rmap, nop)
     | _ => Error (stk_ierror_no_var "arrayinit of non-variable")
     end
-  else alloc_array_move table rmap r tag e.
+  else
+    Let rf := is_ref_e e in
+    if rf then alloc_array_move_ref table rmap r tag ty e
+    else alloc_array_move table rmap r tag e.
 
 Definition bad_lval_number := stk_ierror_no_var "invalid number of lval".
 
@@ -1522,16 +1640,21 @@ Definition alloc_call_arg_aux rmap0 rmap (sao_param: option param_info) (e:pexpr
     Let _ := check_diff xv in
     ok (rmap, (None, Pvar x))
   | None, Some _ => Error (stk_ierror_basic xv "argument not a reg")
-  | Some pi, Some (Pregptr p) =>
-    Let: (sr, status) := get_sub_region_status rmap0 xv in
-    Let _ := check_valid xv status in
-    Let _  := check_align Aligned xv sr pi.(pp_align) in
-    Let rmap :=
-      if pi.(pp_writable) then
-        set_clear rmap xv sr
-      else ok rmap
-    in
-    ok (rmap, (Some (pi.(pp_writable),sr), Pvar (mk_lvar (with_var xv p))))
+  | Some pi, Some (Pregptr p rf) =>
+    if negb (eqb pi.(pp_ref) rf) then
+      if pi.(pp_ref) then Error (stk_error xv (pp_s "the argument should be a reference"))
+      else Error (stk_error xv (pp_s "the argument should not be a reference"))
+    else
+      Let: (sr, status) := get_sub_region_status rmap0 xv in
+      Let _ := check_valid xv status in
+      Let _  := check_align Aligned xv sr pi.(pp_align) in
+      Let rmap :=
+        if pi.(pp_writable) then
+          set_clear rmap xv sr
+        else ok rmap
+      in
+      let e := if rf then e else Pvar (mk_lvar (with_var xv p)) in
+      ok (rmap, (Some (pi.(pp_writable),sr), e))
   | Some _, _ => Error (stk_ierror_basic xv "the argument should be a reg ptr")
   end.
 
@@ -1589,25 +1712,32 @@ Definition check_lval_reg_call (r:lval) :=
 
 Definition get_regptr (x:var_i) :=
   match get_local x with
-  | Some (Pregptr p) => ok (with_var x p)
+  | Some (Pregptr p false) => ok (with_var x p)
+  | Some (Pregptr _ true ) => ok x
   | _ => Error (stk_ierror x (pp_box [:: pp_s "variable"; pp_var x; pp_s "should be a reg ptr"]))
   end.
 
-Definition alloc_lval_call (srs:seq (option (bool * sub_region) * pexpr)) rmap (r: lval) (i:option nat) :=
+Definition alloc_lval_call (srs:seq (option (bool * sub_region) * pexpr)) params rmap (r: lval) (i:option nat) :=
   match i with
   | None =>
     Let _ := check_lval_reg_call r in
     ok (rmap, r)
   | Some i =>
+    Let is_ref :=
+      match nth None params i with
+      | None => Error (stk_ierror_no_var "alloc_lval_call")
+      | Some pi => ok pi.(pp_ref)
+      end
+    in
     match nth (None, Pconst 0) srs i with
     | (Some (_,sr), _) =>
       match r with
-      | Lnone i _ => ok (rmap, Lnone i (aword Uptr))
+      | Lnone i _ => ok (rmap, if is_ref then r else Lnone i (aword Uptr))
       | Lvar x =>
         Let p := get_regptr x in
         let rmap := set_move rmap x sr Valid in
         (* TODO: Lvar p or Lvar (with_var x p) like in alloc_call_arg? *)
-        ok (rmap, Lvar p)
+        ok (rmap, if is_ref then r else Lvar p)
       | Laset _ _ _ _ _ => Error (stk_ierror_basic_lv r "array assignement in lval of a call")
       | Lasub _ _ _ _ _ => Error (stk_ierror_basic_lv r "sub-array assignement in lval of a call")
       | Lmem _ _ _ _    => Error (stk_ierror_basic_lv r "call result should be stored in reg")
@@ -1616,14 +1746,14 @@ Definition alloc_lval_call (srs:seq (option (bool * sub_region) * pexpr)) rmap (
     end
   end.
 
-Definition alloc_call_res rmap srs ret_pos rs :=
-  fmapM2 bad_lval_number (alloc_lval_call srs) rmap rs ret_pos.
+Definition alloc_call_res rmap srs params ret_pos rs :=
+  fmapM2 bad_lval_number (alloc_lval_call srs params) rmap rs ret_pos.
 
 Definition alloc_call (sao_caller:stk_alloc_oracle_t) rmap rs fn es :=
   let sao_callee := local_alloc fn in
   Let es  := alloc_call_args rmap fn sao_callee.(sao_params) es in
   let '(rmap, es) := es in
-  Let rs  := alloc_call_res rmap es sao_callee.(sao_return) rs in
+  Let rs  := alloc_call_res rmap es sao_callee.(sao_params) sao_callee.(sao_return) rs in
   Let _   := assert_check (~~ is_RAnone sao_callee.(sao_return_address))
                (stk_ierror_no_var "cannot call export function")
   in
@@ -1723,7 +1853,7 @@ Fixpoint alloc_i sao (trmap:table*region_map) (i: instr) : cexec (table * region
   match ir with
   | Cassgn r t ty e =>
     if is_aarr ty then
-      Let: (table, rmap, ir) := add_iinfo ii (alloc_array_move_init table rmap r t e) in
+      Let: (table, rmap, ir) := add_iinfo ii (alloc_array_move_init table rmap r t ty e) in
       let table := remove_binding_lval table r in
       ok (table, rmap, [:: MkI ii ir])
     else
@@ -1885,14 +2015,14 @@ Definition add_alloc globals stack (xpk:var * ptr_kind_init) (lrx: Mvar.t ptr_ki
               ok (Sv.add xp sv, Pstkptr x' ofs' ws' cs xp, rmap)
           else Error (stk_ierror_no_var "invalid ptr kind")
         end
-      | PIregptr p =>
+      | PIregptr p rf =>
         if ~~ is_aarr x.(vtype) then
           Error (stk_ierror_no_var "a reg ptr variable must be an array")
         else
         if Sv.mem p sv then Error (stk_ierror_no_var "invalid reg pointer already exists")
         else if Mvar.get locals p is Some _ then Error (stk_ierror_no_var "a pointer is equal to a program var")
         else if ~~ convertible (vtype p) (aword Uptr) then Error (stk_ierror_no_var "invalid pointer type")
-        else ok (Sv.add p sv, Pregptr p, rmap)
+        else ok (Sv.add p sv, Pregptr p rf, rmap)
       end in
     let '(sv,pk, rmap) := svrmap in
     let locals := Mvar.set locals x pk in
@@ -1987,9 +2117,9 @@ Definition init_param (mglob stack : Mvar.t (Z * wsize)) accu pi (x:var_i) :=
          r_align := pi.(pp_align); r_writable := pi.(pp_writable) |} in
     let sr := sub_region_full x r in
     ok (Sv.add pi.(pp_ptr) disj,
-        Mvar.set lmap x (Pregptr pi.(pp_ptr)),
+        Mvar.set lmap x (Pregptr pi.(pp_ptr) pi.(pp_ref)),
         set_move rmap x sr Valid,
-        (Some sr, with_var x pi.(pp_ptr)))
+        (Some sr, if pi.(pp_ref) then x else with_var x pi.(pp_ptr)))
   end.
 
 Definition init_params mglob stack disj lmap rmap sao_params params :=
@@ -2039,14 +2169,26 @@ Definition alloc_fd_aux P p_extra mglob (local_alloc: funname -> stk_alloc_oracl
   Let: (table, rmap, body) :=
     fmapM (alloc_i pmap local_alloc P sao) (table, rmap) fd.(f_body) in
   Let res :=
-      check_results pmap rmap paramsi fd.(f_params) sao.(sao_return) fd.(f_res) in
+    check_results pmap rmap paramsi fd.(f_params) sao.(sao_return) fd.(f_res) in
+  let map_tyin o ty :=
+    match o with
+    | None => ty
+    | Some pi => if pi.(pp_ref) then ty else aword Uptr
+    end
+  in
+  let map_tyout sao o ty :=
+    match o with
+    | None => ty
+    | Some idx => map_tyin (nth None sao.(sao_params) idx) ty
+    end
+  in
   ok {|
     f_info := f_info fd;
     f_contract := f_contract fd;
-    f_tyin := map2 (fun o ty => if o is Some _ then aword Uptr else ty) sao.(sao_params) fd.(f_tyin);
+    f_tyin := map2 map_tyin sao.(sao_params) fd.(f_tyin);
     f_params := params;
     f_body := flatten body;
-    f_tyout := map2 (fun o ty => if o is Some _ then aword Uptr else ty) sao.(sao_return) fd.(f_tyout);
+    f_tyout := map2 (map_tyout sao) sao.(sao_return) fd.(f_tyout);
     f_res := res;
     f_extra := f_extra fd |}.
 
