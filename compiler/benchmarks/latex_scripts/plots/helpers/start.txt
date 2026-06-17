@@ -1,0 +1,165 @@
+% === CONFIG ===
+
+% Format
+\documentclass[11pt]{article}
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+
+% Large line breaks after each paragraph
+\usepackage[skip=1em]{parskip}
+
+
+% Language and font
+\usepackage[T1]{fontenc}
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setmainlanguage{english}
+\usepackage{libertine}
+
+
+% Maths & symbols
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{wasysym}
+\usepackage{textcomp}
+
+
+% Unicode symbols
+\usepackage{newunicodechar}
+\newunicodechar{∃}{\ensuremath{\exists}}
+\newunicodechar{∧}{\ensuremath{\wedge}}
+\newunicodechar{≤}{\ensuremath{\leq}}
+\newunicodechar{⊤}{\ensuremath{\top}}
+\newunicodechar{⊥}{\ensuremath{\bot}}
+
+
+% Colors
+\usepackage{xcolor}
+
+
+% Comparison on reals
+\usepackage{xfp}
+
+
+% Pictures & figures
+\usepackage{graphicx}
+\usepackage[font=footnotesize]{caption}
+
+
+% Web links
+\usepackage[colorlinks=true, linkcolor=green!40!black, citecolor=violet!80!black, urlcolor=cyan!40!black]{hyperref}
+
+
+% Document references
+\usepackage{nameref}
+
+
+% Code
+\usepackage{minted}
+\usemintedstyle[ocaml]{tango} % https://pygments.org/styles/ for more colors
+\usepackage[scaled=0.85]{sourcecodepro}
+
+
+% Bibliography
+\usepackage[nottoc, notlof, notlot]{tocbibind}
+
+
+\usepackage{natbib}
+  % use the natbib citations commands, starred version (all authors):
+  % - \citet*{...} to cite a reference as a word of the sentence
+  % - \citep*{...} to cite a reference as a parenthetical remark
+\renewcommand{\cite}[1]{\citet*{#1}}
+
+
+% Tables
+\usepackage{booktabs}
+\usepackage{tabularray}
+
+
+% Resizing
+\usepackage{adjustbox}
+
+
+% Underline
+\usepackage[normalem]{ulem}
+
+
+% Graphs & plots
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=1.18}
+
+
+% === CMD ===
+
+% One-line ocaml code
+\newcommand{\code}[1]{\mintinline{ocaml}{#1}}
+
+
+% To structure subsubsections
+\newcommand{\parttitle}[1]{\paragraph{#1 \\ \\}}
+
+
+% To print ratio
+\newcommand{\printRatioA}[1]{%
+  \edef\colorResult{\fpeval{#1 < 1.0 ? 1 : 0}}%
+  \edef\underlineResult{\fpeval{(#1 <= 0.95) || (#1 >= 1.05) ? 1 : 0}}%
+  \ifnum\colorResult=1 %
+    \def\coloredText{{\color{red}#1}}%
+  \else%
+    \def\coloredText{{\color{green!60!black}#1}}%
+  \fi%
+  \ifnum\underlineResult=1 %
+    \uline{\coloredText}%
+  \else%
+    \coloredText%
+  \fi%
+}
+
+\newcommand{\printRatioB}[1]{%
+  \edef\colorResult{\fpeval{#1 < 1.0 ? 1 : 0}}%
+  \edef\underlineResult{\fpeval{(#1 <= 0.95) || (#1 >= 1.05) ? 1 : 0}}%
+  \ifnum\colorResult=1 %
+    \def\coloredText{{\color{red}#1}}%
+  \else%
+    \def\coloredText{{\color{green!60!black}#1}}%
+  \fi%
+  \ifnum\underlineResult=1 %
+    \uline{\coloredText}%
+  \else%
+    \coloredText%
+  \fi%
+}
+
+\newcommand{\printRatioC}[1]{%
+  \edef\colorResult{\fpeval{#1 < 1.0 ? 1 : 0}}%
+  \edef\underlineResult{\fpeval{(#1 <= 0.8) || (#1 >= 1.2) ? 1 : 0}}%
+  \ifnum\colorResult=1 %
+    \def\coloredText{{\color{red}#1}}%
+  \else%
+    \def\coloredText{{\color{green!60!black}#1}}%
+  \fi%
+  \ifnum\underlineResult=1 %
+    \uline{\coloredText}%
+  \else%
+    \coloredText%
+  \fi%
+}
+
+
+% === VAR ===
+
+% Variables
+
+\def\github{\href{https://github.com/hjbar/jasmin/tree/wasm}{GitHub}}
+\def\todo{\code{failwith "TODO"}}
+
+\def\reg{\textit{reg}}
+\def\stack{\textit{stack}}
+
+
+% === DOCUMENT ===
+
+\begin{document}
+% ------------------------------------------------------------------------------------------

@@ -6,7 +6,8 @@ _build
 *.vrb
 *_minted*
 *.pdf
-*.txt
+/*.txt
+plots/plot.*
 
 
 ## COMMON LATEX
