@@ -188,7 +188,7 @@ make_latex() {
   mkdir -p "$LATEX_DIR"
 
   # Make the global latex
-  echo "Algorithm name;Is opt algorithm;Ratio wasm-opt -O3 / wasm-opt -O4;Ratio wasm-as / best-wasm-opt;Ratio wasm-as / X86-64;Ratio wasm-opt -O3 / X86-64;Ratio wasm-opt -O4 / X86-64;Ratio best-Wasm / X86-64" > "$LATEX_FILE"
+  echo "Algorithm name;Is opt algorithm;Ratio wasm-opt -O3 [Node] / wasm-opt -O4 [Node];Ratio wasm-as [Node] / best-wasm-opt [Node];Ratio wasm-as [Node] / X86-64;Ratio wasm-opt -O3 [Node] / X86-64;Ratio wasm-opt -O4 [Node] / X86-64;Ratio best-Wasm [Node] / X86-64;Ratio wasm-opt -O3 [Firefox] / wasm-opt -O4 [Firefox];Ratio wasm-as [Firefox] / best-wasm-opt [Firefox];Ratio wasm-as [Firefox] / X86-64;Ratio wasm-opt -O3 [Firefox] / X86-64;Ratio wasm-opt -O4 [Firefox] / X86-64;Ratio best-Wasm [Firefox] / X86-64;Ratio wasm-as [Node] / wasm-as [Firefox];Ratio wasm-opt -O3 [Node] / wasm-opt -O3 [Firefox];Ratio wasm-opt -O4 [Node] / wasm-opt -O4 [Firefox];Ratio best-Wasm [Node] / best-Wasm [Firefox];Ratio best-Wasm / X86-64" > "$LATEX_FILE"
 
   for dir_name in "${DIRNAMES[@]}"; do
 

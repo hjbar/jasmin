@@ -50,51 +50,150 @@ let make_single_plot value_kind legend caption Data.{ names; values } =
   { table; label; sort; axis; max; caption; fig }
 
 
-let make_Ratio_OPT3_OPT4_plot kind_string =
-  make_single_plot Ratio_OPT3_OPT4 "Ratio wasm-opt -O3 / wasm-opt -O4"
+(* Make plots from Node values *)
+let make_Ratio_Opt3Node_Opt4Node_plot kind_string =
+  make_single_plot Ratio_Opt3Node_Opt4Node
+    "Ratio wasm-opt -O3 [Node] / wasm-opt -O4 [Node]"
     (Format.sprintf
        "Rapport entre le temps d'exécution sur les versions %s entre wasm-opt \
-        -O3 et wasm-opt -O4"
+        -O3 [Node] et wasm-opt -O4 [Node]"
        kind_string )
 
 
-let make_Ratio_AS_OPT_plot kind_string =
-  make_single_plot Ratio_AS_OPT "Ratio wasm-as / best-wasm-opt"
+let make_Ratio_AsNode_OptNode_plot kind_string =
+  make_single_plot Ratio_AsNode_OptNode
+    "Ratio wasm-as [Node] / best-wasm-opt [Node]"
     (Format.sprintf
        "Rapport entre le temps d'exécution sur les versions %s entre wasm-as \
-        et best-wasm-opt"
+        [Node] et best-wasm-opt [Node]"
        kind_string )
 
 
-let make_Ratio_AS_X86_plot kind_string =
-  make_single_plot Ratio_AS_X86 "Ratio wasm-as / X86-64"
+let make_Ratio_AsNode_X86_plot kind_string =
+  make_single_plot Ratio_AsNode_X86 "Ratio wasm-as [Node] / X86-64"
     (Format.sprintf
        "Rapport entre le temps d'exécution sur les versions %s entre wasm-as \
-        et X86-64"
+        [Node] et X86-64"
        kind_string )
 
 
-let make_Ratio_OPT3_X86_plot kind_string =
-  make_single_plot Ratio_OPT3_X86 "Ratio wasm-opt -O3 / X86-64"
+let make_Ratio_Opt3Node_X86_plot kind_string =
+  make_single_plot Ratio_Opt3Node_X86 "Ratio wasm-opt -O3 [Node] / X86-64"
     (Format.sprintf
        "Rapport entre le temps d'exécution sur les versions %s entre wasm-opt \
-        -O3 et X86-64"
+        -O3 [Node] et X86-64"
        kind_string )
 
 
-let make_Ratio_OPT4_X86_plot kind_string =
-  make_single_plot Ratio_OPT4_X86 "Ratio wasm-opt -O4 / X86-64"
+let make_Ratio_Opt4Node_X86_plot kind_string =
+  make_single_plot Ratio_Opt4Node_X86 "Ratio wasm-opt -O4 [Node] / X86-64"
     (Format.sprintf
        "Rapport entre le temps d'exécution sur les versions %s entre wasm-opt \
-        -O4 et X86-64"
+        -O4 [Node] et X86-64"
        kind_string )
 
 
-let make_Ratio_WASM_X86_plot kind_string =
-  make_single_plot Ratio_WASM_X86 "Ratio best-Wasm / X86-64"
+let make_Ratio_WasmNode_X86_plot kind_string =
+  make_single_plot Ratio_WasmNode_X86 "Ratio best-Wasm [Node] / X86-64"
     (Format.sprintf
        "Rapport entre le temps d'exécution sur les versions %s entre best-Wasm \
-        et X86-64"
+        [Node] et X86-64"
+       kind_string )
+
+
+(* Make plots from Firefox values *)
+let make_Ratio_Opt3Firefox_Opt4Firefox_plot kind_string =
+  make_single_plot Ratio_Opt3Firefox_Opt4Firefox
+    "Ratio wasm-opt -O3 [Firefox] / wasm-opt -O4 [Firefox]"
+    (Format.sprintf
+       "Rapport entre le temps d'exécution sur les versions %s entre wasm-opt \
+        -O3 [Firefox] et wasm-opt -O4 [Firefox]"
+       kind_string )
+
+
+let make_Ratio_AsFirefox_OptFirefox_plot kind_string =
+  make_single_plot Ratio_AsFirefox_OptFirefox
+    "Ratio wasm-as [Firefox] / best-wasm-opt [Firefox]"
+    (Format.sprintf
+       "Rapport entre le temps d'exécution sur les versions %s entre wasm-as \
+        [Firefox] et best-wasm-opt [Firefox]"
+       kind_string )
+
+
+let make_Ratio_AsFirefox_X86_plot kind_string =
+  make_single_plot Ratio_AsFirefox_X86 "Ratio wasm-as [Firefox] / X86-64"
+    (Format.sprintf
+       "Rapport entre le temps d'exécution sur les versions %s entre wasm-as \
+        [Firefox] et X86-64"
+       kind_string )
+
+
+let make_Ratio_Opt3Firefox_X86_plot kind_string =
+  make_single_plot Ratio_Opt3Firefox_X86 "Ratio wasm-opt -O3 [Firefox] / X86-64"
+    (Format.sprintf
+       "Rapport entre le temps d'exécution sur les versions %s entre wasm-opt \
+        -O3 [Firefox] et X86-64"
+       kind_string )
+
+
+let make_Ratio_Opt4Firefox_X86_plot kind_string =
+  make_single_plot Ratio_Opt4Firefox_X86 "Ratio wasm-opt -O4 [Firefox] / X86-64"
+    (Format.sprintf
+       "Rapport entre le temps d'exécution sur les versions %s entre wasm-opt \
+        -O4 [Firefox] et X86-64"
+       kind_string )
+
+
+let make_Ratio_WasmFirefox_X86_plot kind_string =
+  make_single_plot Ratio_WasmFirefox_X86 "Ratio best-Wasm [Firefox] / X86-64"
+    (Format.sprintf
+       "Rapport entre le temps d'exécution sur les versions %s entre best-Wasm \
+        [Firefox] et X86-64"
+       kind_string )
+
+
+(* Make plots from All values *)
+let make_Ratio_AsNode_AsFirefox_plot kind_string =
+  make_single_plot Ratio_AsNode_AsFirefox
+    "Ratio wasm-as [Node] / wasm-as [Firefox]"
+    (Format.sprintf
+       "Rapport entre le temps d'exécution sur les versions %s entre wasm-as \
+        [Node] et wasm-as [Firefox]"
+       kind_string )
+
+
+let make_Ratio_Opt3Node_Opt3Firefox_plot kind_string =
+  make_single_plot Ratio_Opt3Node_Opt3Firefox
+    "Ratio wasm-opt -O3 [Node] / wasm-opt -O3 [Firefox]"
+    (Format.sprintf
+       "Rapport entre le temps d'exécution sur les versions %s entre wasm-opt \
+        -O3 [Node] et wasm-opt -O3 [Firefox]"
+       kind_string )
+
+
+let make_Ratio_Opt4Node_Opt4Firefox_plot kind_string =
+  make_single_plot Ratio_Opt4Node_Opt4Firefox
+    "Ratio wasm-opt -O4 [Node] / wasm-opt -O4 [Firefox]"
+    (Format.sprintf
+       "Rapport entre le temps d'exécution sur les versions %s entre wasm-opt \
+        -O4 [Node] et wasm-opt -O4 [Firefox]"
+       kind_string )
+
+
+let make_Ratio_WasmNode_WasmFirefox_plot kind_string =
+  make_single_plot Ratio_WasmNode_WasmFirefox
+    "Ratio best-Wasm [Node] / best-Wasm [Firefox]"
+    (Format.sprintf
+       "Rapport entre le temps d'exécution sur les versions %s entre best-Wasm \
+        [Node] et best-Wasm [Firefox]"
+       kind_string )
+
+
+let make_Ratio_Wasm_X86_plot kind_string =
+  make_single_plot Ratio_Wasm_X86 "Ratio best-Wasm [All] / X86-64"
+    (Format.sprintf
+       "Rapport entre le temps d'exécution sur les versions %s entre best-Wasm \
+        [All] et X86-64"
        kind_string )
 
 
@@ -163,9 +262,10 @@ let string_of_axiss axiss =
   axiss |> List.map string_of_axis |> String.concat "\n"
 
 
-let print_plot { table; label; sort; axis; max; caption; fig } =
+let print_plot ?(force = false) { table; label; sort; axis; max; caption; fig }
+    =
   Format.sprintf
-    "\\begin{figure}[htbp]\n\
+    "\\begin{figure}[%s]\n\
     \   \\centering\n\
     \   %s\n\
     \   %s\n\
@@ -179,6 +279,7 @@ let print_plot { table; label; sort; axis; max; caption; fig } =
     \   \\caption{%s}\n\
     \   \\label{fig:%s}\n\
      \\end{figure}\n"
+    (if force then "H" else "htbp")
     (string_of_table table) (string_of_sort sort)
     (string_of_config label max)
     (string_of_axiss axis) caption fig

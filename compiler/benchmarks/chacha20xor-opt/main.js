@@ -1,3 +1,7 @@
+// SpiderMonkey
+globalThis.__currentAlgoDir = 'chacha20xor-opt';
+
+
 // Import libraries
 const { initWasm } = require('../utils/bench_runner');
 const { mainChachaXor } = require('../utils/chacha20xor_shared');

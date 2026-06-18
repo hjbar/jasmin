@@ -1,3 +1,7 @@
+// SpiderMonkey
+globalThis.__currentAlgoDir = 'gimli';
+
+
 // Import libraries
 const { parseArgs, initWasm, runCoreBenchmark, reportStats } = require('../utils/bench_runner');
 

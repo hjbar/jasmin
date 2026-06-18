@@ -10,12 +10,84 @@ and kind_algo =
   | Both
 
 and value_kind =
-  | Ratio_OPT3_OPT4
-  | Ratio_AS_OPT
-  | Ratio_AS_X86
-  | Ratio_OPT3_X86
-  | Ratio_OPT4_X86
-  | Ratio_WASM_X86
+  (* Ratio with Node *)
+  | Ratio_Opt3Node_Opt4Node
+  | Ratio_AsNode_OptNode
+  | Ratio_AsNode_X86
+  | Ratio_Opt3Node_X86
+  | Ratio_Opt4Node_X86
+  | Ratio_WasmNode_X86
+  (* Ratio with Firefox *)
+  | Ratio_Opt3Firefox_Opt4Firefox
+  | Ratio_AsFirefox_OptFirefox
+  | Ratio_AsFirefox_X86
+  | Ratio_Opt3Firefox_X86
+  | Ratio_Opt4Firefox_X86
+  | Ratio_WasmFirefox_X86
+  (* Ratio with All *)
+  | Ratio_AsNode_AsFirefox
+  | Ratio_Opt3Node_Opt3Firefox
+  | Ratio_Opt4Node_Opt4Firefox
+  | Ratio_WasmNode_WasmFirefox
+  | Ratio_Wasm_X86
+
+(* Global values *)
+let value_kinds =
+  [
+    (* Ratio with Node *)
+    Ratio_Opt3Node_Opt4Node;
+    Ratio_AsNode_OptNode;
+    Ratio_AsNode_X86;
+    Ratio_Opt3Node_X86;
+    Ratio_Opt4Node_X86;
+    Ratio_WasmNode_X86;
+    (* Ratio with Firefox *)
+    Ratio_Opt3Firefox_Opt4Firefox;
+    Ratio_AsFirefox_OptFirefox;
+    Ratio_AsFirefox_X86;
+    Ratio_Opt3Firefox_X86;
+    Ratio_Opt4Firefox_X86;
+    Ratio_WasmFirefox_X86;
+    (* Ratio with All *)
+    Ratio_AsNode_AsFirefox;
+    Ratio_Opt3Node_Opt3Firefox;
+    Ratio_Opt4Node_Opt4Firefox;
+    Ratio_WasmNode_WasmFirefox;
+    Ratio_Wasm_X86;
+  ]
+
+
+let value_kinds_node =
+  [
+    Ratio_Opt3Node_Opt4Node;
+    Ratio_AsNode_OptNode;
+    Ratio_AsNode_X86;
+    Ratio_Opt3Node_X86;
+    Ratio_Opt4Node_X86;
+    Ratio_WasmNode_X86;
+  ]
+
+
+let value_kinds_firefox =
+  [
+    Ratio_Opt3Firefox_Opt4Firefox;
+    Ratio_AsFirefox_OptFirefox;
+    Ratio_AsFirefox_X86;
+    Ratio_Opt3Firefox_X86;
+    Ratio_Opt4Firefox_X86;
+    Ratio_WasmFirefox_X86;
+  ]
+
+
+let value_kinds_all =
+  [
+    Ratio_AsNode_AsFirefox;
+    Ratio_Opt3Node_Opt3Firefox;
+    Ratio_Opt4Node_Opt4Firefox;
+    Ratio_WasmNode_WasmFirefox;
+    Ratio_Wasm_X86;
+  ]
+
 
 (* Utils functions *)
 let kind_of_string = function
@@ -72,11 +144,8 @@ let make_data lines only_opt =
   in
 
   let values = Hashtbl.create 16 in
-  Hashtbl.replace values Ratio_OPT3_OPT4 (float_of_line 2);
-  Hashtbl.replace values Ratio_AS_OPT (float_of_line 3);
-  Hashtbl.replace values Ratio_AS_X86 (float_of_line 4);
-  Hashtbl.replace values Ratio_OPT3_X86 (float_of_line 5);
-  Hashtbl.replace values Ratio_OPT4_X86 (float_of_line 6);
-  Hashtbl.replace values Ratio_WASM_X86 (float_of_line 7);
+  List.iteri
+    (fun i kind -> Hashtbl.replace values kind (float_of_line (i + 2)))
+    value_kinds;
 
   { names; values }

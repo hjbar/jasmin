@@ -1,3 +1,7 @@
+// SpiderMonkey
+globalThis.__currentAlgoDir = 'chacha20-opt';
+
+
 // Import libraries
 const { initWasm } = require('../utils/bench_runner');
 const { mainChacha } = require('../utils/chacha20_shared');

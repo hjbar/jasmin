@@ -1,3 +1,7 @@
+// SpiderMonkey
+globalThis.__currentAlgoDir = 'sha256';
+
+
 // Import libraries
 const { initWasm } = require('../utils/bench_runner');
 const { mainSha } = require('../utils/sha256_shared');
