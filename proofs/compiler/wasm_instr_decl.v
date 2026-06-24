@@ -141,6 +141,19 @@ Definition pp_name name args :=
     pp_aop_args := map (fun a => (reg_size, a)) args;
   |}.
 
+Definition wasm_vec128_pp_asm (op : string) (sign : option signedness) : asm_args -> pp_asm_op :=
+  pp_name (
+    "v128."
+    ++
+    op
+    ++
+    match sign with
+    | None => ""
+    | Some Signed => "_s"
+    | Some Unsigned => "_u"
+    end
+  ).
+
 Definition wasm_vec128_velem_pp_asm (op : string) (sign : option signedness) (velem : velem) : asm_args -> pp_asm_op :=
   pp_name (
     "i"
@@ -189,6 +202,7 @@ Variant wasm_op : Type :=
 | REPLACE_LANE of velem (* Vectorized replace lane instruction *)
 | SWIZZLE (* Swizzle i8x16 interpretation *)
 | SHUFFLE (* Shuffle i8x16 interpretation *)
+| BITSELECT (* Vectorized bitselect instruction *)
 | VSHL of velem (* Vectorized Shift Left Logical *)
 | VSHR of signedness * velem (* Vectorized Shift Right Signed/Unsigned *)
 .
@@ -313,7 +327,7 @@ Definition wasm_REPLACE_LANE_instr (velem : velem) : instr_desc_t :=
   let jazz_name := pp_ve_sz "REPLACE_LANE" velem U128 in
   let asm_name := wasm_vec128_velem_pp_asm "replace_lane" None velem in
   let tin := [:: lword U8; lword U128; lword (wasm_velem_conv_wsize velem) ] in
-  let tout := [:: lword U128] in
+  let tout := [:: lword U128 ] in
   {|
       id_valid := true;
       id_msb_flag := MSB_MERGE;
@@ -376,7 +390,7 @@ Definition wasm_SHUFFLE_instr : instr_desc_t :=
   let jazz_name := pp_ve_sz "SHUFFLE" VE8 U128 in
   let asm_name := wasm_vec128_velem_pp_asm "shuffle" None VE8 in
   let tin := [:: lword U128; lword U128; lword U128 ] in
-  let tout := [:: lword U128] in
+  let tout := [:: lword U128 ] in
   {|
       id_valid := true;
       id_msb_flag := MSB_MERGE;
@@ -399,6 +413,39 @@ Definition wasm_SHUFFLE_instr : instr_desc_t :=
 
 Definition prim_SHUFFLE : string * prim_constructor wasm_op :=
   ("SHUFFLE"%string, primM SHUFFLE).
+
+
+Definition wasm_bitselect_semi (v1 v2 mask : word U128) : word U128 :=
+  wor (wand v1 mask) (wand v2 (wnot mask)).
+
+Definition wasm_BITSELECT_instr : instr_desc_t :=
+  let semi := wasm_bitselect_semi in
+  let jazz_name := pp_s "BITSELECT" in
+  let asm_name := wasm_vec128_pp_asm "bitselect" None in
+  let tin := [:: lword U128; lword U128; lword U128 ] in
+  let tout := [:: lword U128 ] in
+  {|
+      id_valid := true;
+      id_msb_flag := MSB_MERGE;
+      id_tin := tin;
+      id_in := [:: Ea 1; Ea 2; Ea 3 ];
+      id_tout := tout;
+      id_out := [:: Ea 0 ];
+      id_semi := sem_lprod_ok tin semi;
+      id_nargs := 4;
+      id_args_kinds := ak_reg_reg_reg_reg;
+      id_eq_size := refl_equal;
+      id_check_dest := refl_equal;
+      id_str_jas := jazz_name; (* how to print it in Jasmin *)
+      id_safe := [::];
+      id_pp_asm := asm_name; (* how to print it in asm *)
+      id_safe_wf := refl_equal;
+      id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+      id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+  |}.
+
+Definition prim_BITSELECT : string * prim_constructor wasm_op :=
+  ("BITSELECT"%string, primM BITSELECT).
 
 
 Definition wasm_vshl_semi (velem : velem) (v : word U128) (n : word U32) : word U128 :=
@@ -447,6 +494,7 @@ Definition wasm_instr_desc (mn : wasm_op) : instr_desc_t :=
   | REPLACE_LANE velem => wasm_REPLACE_LANE_instr velem
   | SWIZZLE => wasm_SWIZZLE_instr
   | SHUFFLE => wasm_SHUFFLE_instr
+  | BITSELECT => wasm_BITSELECT_instr
   | VSHL velem => wasm_VSHL_instr velem
   | VSHR (sign, velem) => wasm_VSHR_instr sign velem
   end.
@@ -457,6 +505,7 @@ Definition wasm_prim_string : seq (string * prim_constructor wasm_op) := [::
   prim_REPLACE_LANE;
   prim_SWIZZLE;
   prim_SHUFFLE;
+  prim_BITSELECT;
   prim_VSHL;
   prim_VSHR
 ].

@@ -1,0 +1,45 @@
+u128 vec1 = (16u8)[  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 ];
+u128 vec2 = (16u8)[ 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16 ];
+u128 vec3 = (16u8)[ 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47 ];
+
+export
+fn main_test(reg u32 x) -> reg u32 {
+  reg u32 tmp1;
+  reg u32 tmp2;
+
+  reg u128 a1 = vec1;
+  reg u128 a2 = vec2;
+  reg u128 mask1 = vec3;
+  reg u128 b1 = vec1;
+  reg u128 b2 = vec2;
+  reg u128 mask2 = vec3;
+
+  reg u128 res1 = #BITSELECT(a1, a2, mask1);
+  reg u128 res2 = (b1 & mask2) | (b2 & !mask2);
+
+  reg u32 total = x;
+  inline int i;
+
+  for i = 0 to 16 {
+    tmp1 = #EXTRACT_LANE_16u8(i, a1);
+    tmp2 = #EXTRACT_LANE_16u8(i, b1);
+    total += (tmp1 - tmp2);
+  }
+  for i = 0 to 16 {
+    tmp1 = #EXTRACT_LANE_16u8(i, a2);
+    tmp2 = #EXTRACT_LANE_16u8(i, b2);
+    total += (tmp1 - tmp2);
+  }
+  for i = 0 to 16 {
+    tmp1 = #EXTRACT_LANE_16u8(i, mask1);
+    tmp2 = #EXTRACT_LANE_16u8(i, mask2);
+    total += (tmp1 - tmp2);
+  }
+  for i = 0 to 16 {
+    tmp1 = #EXTRACT_LANE_16u8(i, res1);
+    tmp2 = #EXTRACT_LANE_16u8(i, res2);
+    total += (tmp1 - tmp2);
+  }
+
+  return total; // Should return x
+}

@@ -122,11 +122,15 @@ type binop =
   | Shuffle of num list (* Only for the i8x16 interpretation *)
   | Replace_lane of ty * num
 
+type trinop =
+  | Bitselect
+
 type instr =
   | Nop
   | Drop
   | Unop of unop * instr
   | Binop of binop * instr * instr
+  | Trinop of trinop * instr * instr * instr
   | Const of ty * ty option * num list
   | Get of access * scope * var
   | Set of access * scope * var * instr option

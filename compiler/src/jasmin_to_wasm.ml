@@ -851,6 +851,12 @@ and copn_to_instrs ~(funname : funname) ~(i_loc : Location.i_loc) ~(instr : ('le
     let i1 = gexpr_to_instr e1 in
     let i2 = gexpr_to_instr e2 in
     set_instr x (Binop (op, i1, i2))
+  | [ x ], Oasm (BaseOp (None, BITSELECT)), [ e1; e2; e3 ] ->
+    let op = Bitselect in
+    let i1 = gexpr_to_instr e1 in
+    let i2 = gexpr_to_instr e2 in
+    let i3 = gexpr_to_instr e3 in
+    set_instr x (Trinop (op, i1, i2, i3))
   | [ x ], Oasm (BaseOp (None, VSHL velem)), [ e1; e2 ] ->
     let op = Shl (velem_to_op_ty velem) in
     let i1 = gexpr_to_instr e1 in

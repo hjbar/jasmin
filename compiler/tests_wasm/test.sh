@@ -125,6 +125,9 @@ make -C "$PARENT_DIR"
 clear
 
 # Run the tests
+EXPECTED_RESULTS=("0" "1" "10" "42" "100" "-1" "-10" "-42" "-100")
+run_tests "$ROOT_DIR/wasm_32/wasm_bitselect01_32.jazz" 32 "${EXPECTED_RESULTS[@]}"
+
 EXPECTED_RESULTS=("420672" "422345" "437402" "490938" "587972" "418999" "403942" "350406" "253372")
 run_tests "$ROOT_DIR/wasm_64/wasm_swizzle01_64.jazz" 64 "${EXPECTED_RESULTS[@]}"
 

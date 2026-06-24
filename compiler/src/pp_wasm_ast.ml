@@ -182,6 +182,10 @@ let pp_binop (fmt : formatter) (binop : binop) : unit =
       pp_ty simd
       pp_num num
 
+let pp_trinop (fmt : formatter) (trinop : trinop) : unit =
+  match trinop with
+  | Bitselect -> fprintf fmt "v128.bitselect"
+
 let rec pp_instr (fmt : formatter) (instr : instr) : unit =
   match instr with
   | Nop -> fprintf fmt "(nop)"
@@ -195,6 +199,12 @@ let rec pp_instr (fmt : formatter) (instr : instr) : unit =
       pp_binop binop
       pp_instr instr1
       pp_instr instr2
+  | Trinop (trinop, instr1, instr2, instr3) ->
+    fprintf fmt "@[<hv 2>(%a@ %a@ %a@ %a)@]"
+      pp_trinop trinop
+      pp_instr instr1
+      pp_instr instr2
+      pp_instr instr3
   | Const (ty, None, [ num ]) ->
     fprintf fmt "(%a.const %a)"
       pp_ty ty
