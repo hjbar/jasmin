@@ -1,0 +1,19 @@
+inline fn max(reg u32 a, reg u32 b) -> reg u32 {
+  reg u32 res;
+  if (a >32s b) {
+    res = a;
+  } else {
+    res = b;
+  }
+  return res;
+}
+
+inline fn min(reg u32 a, reg u32 b) -> reg u32 {
+  reg u32 res;
+  if (a <32s b) {
+    res = a;
+  } else {
+    res = b;
+  }
+  return res;
+}

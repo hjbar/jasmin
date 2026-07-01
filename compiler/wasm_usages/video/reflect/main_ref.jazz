@@ -1,0 +1,27 @@
+require "utils.jinc"
+
+inline fn alphaRow(reg u32 data, reg u32 width, reg u32 j, reg u32 a) {
+  reg u32 i;
+  reg u32 idx;
+
+  i = 0;
+  while (i <32s (j + width)) {
+    idx = 3 + (4 * (i + (width * j)));
+    [:u8 data + idx] = a;
+    i += 1;
+  }
+}
+
+export fn inner_computeFrame(reg u32 data, reg u32 width, reg u32 height, reg u32 step) {
+  reg u32 j;
+  reg u32 alpha;
+
+  j = 0;
+  while (j <32s height) {
+    alpha = max(0, 256 - (step * j));
+    alpha = min(255, alpha);
+    alphaRow(data, width, j, alpha);
+    j += 1;
+  }
+
+}

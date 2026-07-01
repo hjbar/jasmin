@@ -1,0 +1,100 @@
+require "utils.jinc"
+
+export fn inner_computeFrame(reg u32 width, reg u32 height, reg u32 kernel, reg u32 inputData, reg u32 outputData) {
+  inline int y, x;
+  reg u32 j, i;
+  reg u32 r, g, b;
+  reg u32 idx, weight;
+  reg u128 v0, v255;
+  reg u128 rv, gv, bv, mask_r, mask_g, mask_b;
+  reg u128 v_weight, mask_a, pixel_4;
+
+  v0 = 0; v255 = #SPLAT_4u32(255);
+  mask_r = (4u32)[0x000000FF, 0x000000FF, 0x000000FF, 0x000000FF];
+  mask_g = (4u32)[0x0000FF00, 0x0000FF00, 0x0000FF00, 0x0000FF00];
+  mask_b = (4u32)[0x00FF0000, 0x00FF0000, 0x00FF0000, 0x00FF0000];
+  mask_a = (4u32)[0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000];
+
+  j = 1;
+  while (j <32s (height - 1)) {
+    i = 1;
+
+    while (i <32s (width - 4)) {
+
+      rv = 0; gv = 0; bv = 0;
+
+      for y = -1 to 2 {
+        for x = -1 to 2 {
+
+          v_weight = #SPLAT_4u32([:u32 (kernel + (((3 * y) + x + 4) << 2))]);
+          pixel_4 = [:u128 (inputData + (((j + y) * width + (i + x)) << 2))];
+
+          rv +4u32= ( (pixel_4 & mask_r)            *4u32 v_weight);
+          gv +4u32= (((pixel_4 & mask_g) >>4s32  8) *4u32 v_weight);
+          bv +4u32= (((pixel_4 & mask_b) >>4s32 16) *4u32 v_weight);
+
+        }
+      }
+
+      rv = max_4u32(rv, v0);
+      rv = min_4u32(rv, v255);
+
+      gv = max_4u32(gv, v0);
+      gv = min_4u32(gv, v255);
+      gv <<4u32= 8;
+
+      bv = max_4u32(bv, v0);
+      bv = min_4u32(bv, v255);
+      bv <<4u32= 16;
+
+      [:u128 (outputData + ((j * width + i) << 2))] = (rv | gv | bv | mask_a);
+
+      i += 4;
+    }
+
+    while (i <32s (width - 1)) {
+
+      r = 0; g = 0; b = 0;
+
+      for y = -1 to 2 {
+        for x = -1 to 2 {
+
+          weight = [:u32 (kernel + (((3 * y) + x + 4) << 2))];
+          idx = inputData + (((j + y) * width + (i + x)) << 2);
+
+          r += (32u)[:u8 idx    ] * weight;
+          g += (32u)[:u8 idx + 1] * weight;
+          b += (32u)[:u8 idx + 2] * weight;
+
+        }
+      }
+
+      if (r <32s 0) {
+        r = 0;
+      } else if (r >32s 255) {
+        r = 255;
+      }
+      if (g <32s 0) {
+        g = 0;
+      } else if (g >32s 255) {
+        g = 255;
+      }
+      if (b <32s 0) {
+        b = 0;
+      } else if (b >32s 255) {
+        b = 255;
+      }
+
+      idx = outputData + ((j * width + i) << 2);
+      [:u8 idx    ] = r;
+      [:u8 idx + 1] = g;
+      [:u8 idx + 2] = b;
+      [:u8 idx + 3] = 255;
+
+      i += 1;
+    }
+
+    j += 1;
+  }
+
+}

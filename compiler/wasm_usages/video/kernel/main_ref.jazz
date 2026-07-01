@@ -1,0 +1,53 @@
+require "utils.jinc"
+
+export fn inner_computeFrame(reg u32 width, reg u32 height, reg u32 kernel, reg u32 inputData, reg u32 outputData) {
+  reg u32 j, i;
+  inline int y, x;
+  reg u32 r, g, b;
+  reg u32 idx, kernelIdx, weight;
+
+  j = 1;
+  while (j <32s (height - 1)) {
+    i = 1;
+    while (i <32s (width - 1)) {
+
+      r = 0;
+      g = 0;
+      b = 0;
+
+      for y = -1 to 2 {
+        for x = -1 to 2 {
+
+          idx = ((j + y) * width + (i + x)) * 4;
+          kernelIdx = ((y + 1) * 3 + (x + 1)) * 4;
+          weight = [:u32 kernel + kernelIdx];
+
+          r += (32u)[:u8 inputData + idx + 0] * weight;
+          g += (32u)[:u8 inputData + idx + 1] * weight;
+          b += (32u)[:u8 inputData + idx + 2] * weight;
+
+        }
+      }
+
+      idx = (j * width + i) * 4;
+
+      r = max(r, 0);
+      r = min(r, 255);
+
+      g = max(g, 0);
+      g = min(g, 255);
+
+      b = max(b, 0);
+      b = min(b, 255);
+
+      [:u8 outputData + idx + 0] = r;
+      [:u8 outputData + idx + 1] = g;
+      [:u8 outputData + idx + 2] = b;
+      [:u8 outputData + idx + 3] = 255;
+
+      i += 1;
+    }
+    j += 1;
+  }
+
+}

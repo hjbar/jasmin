@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Video Convolution Filter (Kernel)</title>
+    <style>
+      body {
+        background: black;
+        margin: 0;
+        padding: 20px;
+      }
+      .container {
+        text-align: center;
+      }
+      .separator {
+        border-top: 1px solid #aaa;
+        margin-left: 200px;
+        margin-right: 200px;
+        height: 1px;
+        margin-top: -4px;
+      }
+      #c2, #c3 {
+        width: 640px;
+        height: 400px;
+        margin-top: 20px;
+      }
+    </style>
+    <script type="module" src="main.js" defer></script>
+  </head>
+
+  <body>
+    <nav>
+      <ul>
+        <li><a href="demo1.html">DEMO 1</a></li>
+        <li><a href="demo2.html">DEMO 2</a></li>
+      </ul>
+    </nav>
+    <div class="container">
+      <video id="video"
+             src="video.mp4"
+             width="640"
+             height="400"
+             controls>
+      </video>
+      <div class="separator">
+        <canvas id="c1" style="display: none;"></canvas>
+        <canvas id="c2"></canvas>
+        <canvas id="c3"></canvas>
+      </div>
+    </div>
+  </body>
+</html>

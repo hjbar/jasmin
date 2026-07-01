@@ -1,0 +1,9 @@
+*.wat
+*.wasm
+
+node_modules
+package.json
+package-lock.json
+
+logs
+logs/*.txt

@@ -1,0 +1,55 @@
+export fn inner_computeFrame(reg u32 data, reg u32 width, reg u32 height, reg u32 step) {
+  // locals
+  reg u32 i;
+  reg u32 j;
+  reg u32 idx;
+  reg u32 cur_width;
+  reg u32 cond_while2;
+  reg u32 alpha;
+
+  reg u128 v_alpha;
+  reg u128 v_mask;
+  reg u128 v_mem;
+
+  // Init args
+  v_mask = #SPLAT_4u32(0xFF000000);
+
+  // Inline while when j = 0
+  v_alpha = #SPLAT_4u32(255 << 24);
+  idx = data;
+  i = 0;
+  while (i < width) {
+    v_mem = [:u128 idx];
+    v_mem = #BITSELECT(v_alpha, v_mem, v_mask); // Compute: (v_alpha & v_mask) | (v_mem & !v_mask)
+    [:u128 idx] = v_mem;
+    idx += 16;
+    i += 4;
+  }
+
+  // While starting with j=1
+  j = 1;
+  cur_width = width;
+  while (j < height) {
+    alpha = 256 - (step * j);
+    if (alpha <32s 0) { alpha = 0; }
+    else if (alpha > 255) { alpha = 255; }
+    v_alpha = #SPLAT_4u32(alpha << 24);
+
+    idx = data + (cur_width << 2);
+    i = 0;
+    cond_while2 = j + width;
+
+    while (i < cond_while2) {
+      v_mem = [:u128 idx];
+      v_mem = #BITSELECT(v_alpha, v_mem, v_mask); // Compute: (v_alpha & v_mask) | (v_mem & !v_mask)
+      [:u128 idx] = v_mem;
+
+      idx += 16;
+      i += 4;
+    }
+
+    j += 1;
+    cur_width += width;
+  }
+
+}

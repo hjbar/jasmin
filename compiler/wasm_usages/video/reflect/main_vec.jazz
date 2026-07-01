@@ -1,0 +1,37 @@
+require "utils.jinc"
+
+inline fn alphaRow(reg u32 data, reg u32 width, reg u32 j, reg u32 a) {
+  reg u32 i;
+  reg u32 idx;
+
+  reg u128 v_alpha;
+  reg u128 v_mem;
+
+  v_alpha = #SPLAT_4u32(a << 24);
+  reg u128 v_mask = #SPLAT_4u32(0xFF000000);
+
+  i = 0;
+  while (i <32s (j + width)) {
+    idx = data + (4 * (i + (width * j)));
+
+    v_mem = [:u128 idx];
+    v_mem = #BITSELECT(v_alpha, v_mem, v_mask); // Compute: (v_alpha & v_mask) | (v_mem & !v_mask)
+    [:u128 idx] = v_mem;
+
+    i += 4;
+  }
+}
+
+export fn inner_computeFrame(reg u32 data, reg u32 width, reg u32 height, reg u32 step) {
+  reg u32 j;
+  reg u32 alpha;
+
+  j = 0;
+  while (j <32s height) {
+    alpha = max(0, 256 - (step * j));
+    alpha = min(255, alpha);
+    alphaRow(data, width, j, alpha);
+    j += 1;
+  }
+
+}
