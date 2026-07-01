@@ -4,12 +4,16 @@ export fn inner_computeFrame(reg u32 width, reg u32 height, reg u32 kernel, reg 
   inline int y, x;
   reg u32 j, i;
   reg u32 r, g, b;
-  reg u32 idx, weight;
+  reg u32 idx, weight, j_x_width;
   reg u128 v0, v255;
   reg u128 rv, gv, bv, mask_r, mask_g, mask_b;
   reg u128 v_weight, mask_a, pixel_4;
 
-  v0 = 0; v255 = #SPLAT_4u32(255);
+  j_x_width = width;
+
+  v0 = (4u32)[0, 0, 0, 0];
+  v255 = (4u32)[255, 255, 255, 255];
+
   mask_r = (4u32)[0x000000FF, 0x000000FF, 0x000000FF, 0x000000FF];
   mask_g = (4u32)[0x0000FF00, 0x0000FF00, 0x0000FF00, 0x0000FF00];
   mask_b = (4u32)[0x00FF0000, 0x00FF0000, 0x00FF0000, 0x00FF0000];
@@ -36,18 +40,18 @@ export fn inner_computeFrame(reg u32 width, reg u32 height, reg u32 kernel, reg 
         }
       }
 
-      rv = max_4u32(rv, v0);
-      rv = min_4u32(rv, v255);
+      rv = #MAX_4s32(rv, v0);
+      rv = #MIN_4s32(rv, v255);
 
-      gv = max_4u32(gv, v0);
-      gv = min_4u32(gv, v255);
+      gv = #MAX_4s32(gv, v0);
+      gv = #MIN_4s32(gv, v255);
       gv <<4u32= 8;
 
-      bv = max_4u32(bv, v0);
-      bv = min_4u32(bv, v255);
+      bv = #MAX_4s32(bv, v0);
+      bv = #MIN_4s32(bv, v255);
       bv <<4u32= 16;
 
-      [:u128 (outputData + ((j * width + i) << 2))] = (rv | gv | bv | mask_a);
+      [:u128 (outputData + ((j_x_width + i) << 2))] = (rv | gv | bv | mask_a);
 
       i += 4;
     }
@@ -60,11 +64,13 @@ export fn inner_computeFrame(reg u32 width, reg u32 height, reg u32 kernel, reg 
         for x = -1 to 2 {
 
           weight = [:u32 (kernel + (((3 * y) + x + 4) << 2))];
-          idx = inputData + (((j + y) * width + (i + x)) << 2);
 
-          r += (32u)[:u8 idx    ] * weight;
-          g += (32u)[:u8 idx + 1] * weight;
-          b += (32u)[:u8 idx + 2] * weight;
+          idx = inputData + (((j + y) * width + (i + x)) << 2);
+          r += (32u)[:u8 idx] * weight;
+          idx += 1;
+          g += (32u)[:u8 idx] * weight;
+          idx += 1;
+          b += (32u)[:u8 idx] * weight;
 
         }
       }
@@ -85,16 +91,20 @@ export fn inner_computeFrame(reg u32 width, reg u32 height, reg u32 kernel, reg 
         b = 255;
       }
 
-      idx = outputData + ((j * width + i) << 2);
-      [:u8 idx    ] = r;
-      [:u8 idx + 1] = g;
-      [:u8 idx + 2] = b;
-      [:u8 idx + 3] = 255;
+      idx = outputData + ((j_x_width + i) << 2);
+      [:u8 idx] = r;
+      idx += 1;
+      [:u8 idx] = g;
+      idx += 1;
+      [:u8 idx] = b;
+      idx += 1;
+      [:u8 idx] = 255;
 
       i += 1;
     }
 
     j += 1;
+    j_x_width += width;
   }
 
 }

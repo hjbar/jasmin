@@ -48,7 +48,7 @@ inline fn update_frame_vec(reg u32 width, reg u32 kernel, reg u32 inputData, reg
   reg u128 r, g, b, r_32x4, g_32x4, b_32x4, mask_r, mask_g, mask_b;
   reg u128 v_weight, mask_a, pixel_4;
 
-  v0 = 0;
+  v0 = #SPLAT_4u32(0);
   v255 = #SPLAT_4u32(255);
 
   r = 0;
@@ -86,15 +86,15 @@ inline fn update_frame_vec(reg u32 width, reg u32 kernel, reg u32 inputData, reg
     }
   }
 
-  r = max_4u32(r, v0);
-  r = min_4u32(r, v255);
+  r = #MAX_4s32(r, v0);
+  r = #MIN_4s32(r, v255);
 
-  g = max_4u32(g, v0);
-  g = min_4u32(g, v255);
+  g = #MAX_4s32(g, v0);
+  g = #MIN_4s32(g, v255);
   g = g <<4u32 8;
 
-  b = max_4u32(b, v0);
-  b = min_4u32(b, v255);
+  b = #MAX_4s32(b, v0);
+  b = #MIN_4s32(b, v255);
   b = b <<4u32 16;
 
   pixel_4 = r | g;
