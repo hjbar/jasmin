@@ -121,6 +121,8 @@ type binop =
   | Swizzle (* Only for the i8x16 interpretation *)
   | Shuffle of num list (* Only for the i8x16 interpretation *)
   | Replace_lane of ty * num
+  | Max of ty * sign (* Only for i8x16, i16x8 and i32x4 interpretations *)
+  | Min of ty * sign (* Only for i8x16, i16x8 and i32x4 interpretations *)
 
 type trinop =
   | Bitselect

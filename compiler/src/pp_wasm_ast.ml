@@ -181,6 +181,14 @@ let pp_binop (fmt : formatter) (binop : binop) : unit =
     fprintf fmt "%a.replace_lane %a"
       pp_ty simd
       pp_num num
+  | Max (simd, sign) ->
+    fprintf fmt "%a.max_%a"
+      pp_ty simd
+      pp_sign sign
+  | Min (simd, sign) ->
+    fprintf fmt "%a.min_%a"
+      pp_ty simd
+      pp_sign sign
 
 let pp_trinop (fmt : formatter) (trinop : trinop) : unit =
   match trinop with

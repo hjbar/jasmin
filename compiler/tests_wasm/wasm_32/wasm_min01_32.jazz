@@ -1,0 +1,38 @@
+u128 v16u8_1 = (16u8)[  0,  4,  2,  6, 10,  8, 12, 16, 14, 18, 22, 20, 24, 28, 26, 30 ];
+u128 v16u8_2 = (16u8)[  7,  3,  5,  1, 15, 11, 13,  7, 23, 19, 21, 17, 31, 27, 29, 25 ];
+
+u128 v8u16_1 = (8u16)[  0,  4,  2,  6, 10,  8, 12, 16 ];
+u128 v8u16_2 = (8u16)[  7,  3,  5,  1, 15, 11, 13,  7 ];
+
+u128 v4u32_1 = (4u32)[  8,  4,  2,  6 ];
+u128 v4u32_2 = (4u32)[  7,  3,  5,  1 ];
+
+export
+fn main_test(reg u32 x) -> reg u32 {
+  inline int i;
+  reg u32 res, val;
+  reg u128 vmin1, vmin2, vmin3;
+
+  vmin1 = #MIN_16u8(v16u8_1, v16u8_2);
+  vmin2 = #MIN_8u16(v8u16_1, v8u16_2);
+  vmin3 = #MIN_4u32(v4u32_1, v4u32_2);
+
+  res = x;
+
+  for i = 0 to 16 {
+    val = #EXTRACT_LANE_16u8(i, vmin1);
+    res += val;
+  }
+
+  for i = 0 to 8 {
+    val = #EXTRACT_LANE_8u16(i, vmin2);
+    res -= val;
+  }
+
+  for i = 0 to 4 {
+    val = #EXTRACT_LANE_4u32(i, vmin3);
+    res *= val;
+  }
+
+  return res; // Should return 42 * x + 7224
+}

@@ -867,6 +867,16 @@ and copn_to_instrs ~(funname : funname) ~(i_loc : Location.i_loc) ~(instr : ('le
     let i1 = gexpr_to_instr e1 in
     let i2 = gexpr_to_instr e2 in
     set_instr x (Binop (op, i1, i2))
+  | [ x ], Oasm (BaseOp (None, VMAX (sign, ((VE8 | VE16 | VE32) as velem)))), [ e1; e2 ] ->
+    let op = Max (velem_to_op_ty velem, sign) in
+    let i1 = gexpr_to_instr e1 in
+    let i2 = gexpr_to_instr e2 in
+    set_instr x (Binop (op, i1, i2))
+  | [ x ], Oasm (BaseOp (None, VMIN (sign, ((VE8 | VE16 | VE32) as velem)))), [ e1; e2 ] ->
+    let op = Min (velem_to_op_ty velem, sign) in
+    let i1 = gexpr_to_instr e1 in
+    let i2 = gexpr_to_instr e2 in
+    set_instr x (Binop (op, i1, i2))
   | _ -> ginstr_to_error instr
 
 and ginstrs_to_instrs ~(funname : funname) (instrs : ('len, 'info, 'asm) ginstr list) : instrs =

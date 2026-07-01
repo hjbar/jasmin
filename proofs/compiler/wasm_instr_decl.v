@@ -203,8 +203,10 @@ Variant wasm_op : Type :=
 | SWIZZLE (* Swizzle i8x16 interpretation *)
 | SHUFFLE (* Shuffle i8x16 interpretation *)
 | BITSELECT (* Vectorized bitselect instruction *)
-| VSHL of velem (* Vectorized Shift Left Logical *)
-| VSHR of signedness * velem (* Vectorized Shift Right Signed/Unsigned *)
+| VSHL of velem (* Vectorized Shift Left Logical instruction *)
+| VSHR of signedness * velem (* Vectorized Shift Right Signed/Unsigned instruction *)
+| VMAX of signedness * velem (* Vectorized Maximum Signed/Unsigned instruction *)
+| VMIN of signedness * velem (* Vectorized Minimum Signed/Unsigned instruction *)
 .
 
 #[ export ]
@@ -484,6 +486,105 @@ Definition prim_VSHR : string * prim_constructor wasm_op :=
   ("VSHR"%string, primSV128 VSHR).
 
 
+Definition wasm_vmax_semi (sign : signedness) (velem : velem) (v1 v2 : word U128) : exec (word U128) :=
+  match velem with
+  | VE64 => Error E.no_semantics
+  | VE8 | VE16 | VE32 => ok (wmax sign velem v1 v2)
+  end.
+
+Lemma wasm_vmax_semi_errty (sign : signedness) (velem : velem) :
+  sem_lforall (fun r : result error (sem_ltuple [:: lword U128]) => r <> Error ErrType)
+    [:: lword U128; lword U128 ] (wasm_vmax_semi sign velem).
+Proof.
+Admitted.
+
+Lemma wasm_vmax_semi_safe (sign : signedness) (velem : velem) :
+  interp_safe_cond_lty [:: lword U128; lword U128 ] [::] (wasm_vmax_semi sign velem).
+Proof.
+Admitted.
+
+Definition wasm_VMAX_instr (sign : signedness) (velem : velem) : instr_desc_t :=
+  let semi := wasm_vmax_semi sign velem in
+  let semi_errty := wasm_vmax_semi_errty in
+  let semi_safe := wasm_vmax_semi_safe in
+  let jazz_name := pp_sign_ve_sz "MAX" sign velem U128 in
+  let asm_name := wasm_vec128_velem_pp_asm "max" (Some sign) velem in
+  let tin := [:: lword U128; lword U128 ] in
+  let tout := [:: lword U128 ] in
+  {|
+      id_valid := true;
+      id_msb_flag := MSB_MERGE;
+      id_tin := tin;
+      id_in := [:: Ea 1; Ea 2 ];
+      id_tout := tout;
+      id_out := [:: Ea 0 ];
+      id_semi := semi;
+      id_nargs := 3;
+      id_args_kinds := ak_reg_reg_reg;
+      id_eq_size := refl_equal;
+      id_check_dest := refl_equal;
+      id_str_jas := jazz_name; (* how to print it in Jasmin *)
+      id_safe := [::];
+      id_pp_asm := asm_name; (* how to print it in asm *)
+      id_safe_wf := refl_equal;
+      id_semi_errty := fun _ => semi_errty sign velem;
+      id_semi_safe := fun _ => semi_safe sign velem;
+  |}.
+
+Definition prim_VMAX : string * prim_constructor wasm_op :=
+  ("MAX"%string, primSV128 VMAX).
+
+
+Definition wasm_vmin_semi (sign : signedness) (velem : velem) (v1 v2 : word U128) : exec (word U128) :=
+  match velem with
+  | VE64 => Error E.no_semantics
+  | VE8 | VE16 | VE32 => ok (wmin sign velem v1 v2)
+  end.
+
+Lemma wasm_vmin_semi_errty (sign : signedness) (velem : velem) :
+  sem_lforall (fun r : result error (sem_ltuple [:: lword U128]) => r <> Error ErrType)
+    [:: lword U128; lword U128 ] (wasm_vmin_semi sign velem).
+Proof.
+Admitted.
+
+Lemma wasm_vmin_semi_safe (sign : signedness) (velem : velem) :
+  interp_safe_cond_lty [:: lword U128; lword U128 ] [::] (wasm_vmin_semi sign velem).
+Proof.
+Admitted.
+
+Definition wasm_VMIN_instr (sign : signedness) (velem : velem) : instr_desc_t :=
+  let semi := wasm_vmin_semi sign velem in
+  let semi_errty := wasm_vmin_semi_errty in
+  let semi_safe := wasm_vmin_semi_safe in
+  let jazz_name := pp_sign_ve_sz "MIN" sign velem U128 in
+  let asm_name := wasm_vec128_velem_pp_asm "min" (Some sign) velem in
+  let tin := [:: lword U128; lword U128 ] in
+  let tout := [:: lword U128 ] in
+  {|
+      id_valid := true;
+      id_msb_flag := MSB_MERGE;
+      id_tin := tin;
+      id_in := [:: Ea 1; Ea 2 ];
+      id_tout := tout;
+      id_out := [:: Ea 0 ];
+      id_semi := semi;
+      id_nargs := 3;
+      id_args_kinds := ak_reg_reg_reg;
+      id_eq_size := refl_equal;
+      id_check_dest := refl_equal;
+      id_str_jas := jazz_name; (* how to print it in Jasmin *)
+      id_safe := [::];
+      id_pp_asm := asm_name; (* how to print it in asm *)
+      id_safe_wf := refl_equal;
+      id_semi_errty := fun _ => semi_errty sign velem;
+      id_semi_safe := fun _ => semi_safe sign velem;
+  |}.
+
+Definition prim_VMIN : string * prim_constructor wasm_op :=
+  ("MIN"%string, primSV128 VMIN).
+
+
+
 (* -------------------------------------------------------------------- *)
 (* Description of instructions. *)
 
@@ -497,6 +598,8 @@ Definition wasm_instr_desc (mn : wasm_op) : instr_desc_t :=
   | BITSELECT => wasm_BITSELECT_instr
   | VSHL velem => wasm_VSHL_instr velem
   | VSHR (sign, velem) => wasm_VSHR_instr sign velem
+  | VMAX (sign, velem) => wasm_VMAX_instr sign velem
+  | VMIN (sign, velem) => wasm_VMIN_instr sign velem
   end.
 
 Definition wasm_prim_string : seq (string * prim_constructor wasm_op) := [::
@@ -507,7 +610,9 @@ Definition wasm_prim_string : seq (string * prim_constructor wasm_op) := [::
   prim_SHUFFLE;
   prim_BITSELECT;
   prim_VSHL;
-  prim_VSHR
+  prim_VSHR;
+  prim_VMAX;
+  prim_VMIN
 ].
 
 #[ export ]

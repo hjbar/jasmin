@@ -128,6 +128,18 @@ clear
 EXPECTED_RESULTS=("0" "1" "10" "42" "100" "-1" "-10" "-42" "-100")
 run_tests "$ROOT_DIR/wasm_32/wasm_bitselect01_32.jazz" 32 "${EXPECTED_RESULTS[@]}"
 
+EXPECTED_RESULTS=("169680" "170520" "178080" "204960" "253680" "168840" "161280" "134400" "85680")
+run_tests "$ROOT_DIR/wasm_32/wasm_max01_32.jazz" 32 "${EXPECTED_RESULTS[@]}"
+
+EXPECTED_RESULTS=("177600" "178560" "187200" "217920" "273600" "176640" "168000" "137280" "81600")
+run_tests "$ROOT_DIR/wasm_32/wasm_max02_32.jazz" 32 "${EXPECTED_RESULTS[@]}"
+
+EXPECTED_RESULTS=("7224" "7266" "7644" "8988" "11424" "7182" "6804" "5460" "3024")
+run_tests "$ROOT_DIR/wasm_32/wasm_min01_32.jazz" 32 "${EXPECTED_RESULTS[@]}"
+
+EXPECTED_RESULTS=("-630" "-588" "-210" "1134" "3570" "-672" "-1050" "-2394" "-4830")
+run_tests "$ROOT_DIR/wasm_32/wasm_min02_32.jazz" 32 "${EXPECTED_RESULTS[@]}"
+
 EXPECTED_RESULTS=("420672" "422345" "437402" "490938" "587972" "418999" "403942" "350406" "253372")
 run_tests "$ROOT_DIR/wasm_64/wasm_swizzle01_64.jazz" 64 "${EXPECTED_RESULTS[@]}"
 
