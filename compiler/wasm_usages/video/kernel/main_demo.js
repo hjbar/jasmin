@@ -15,7 +15,7 @@ export function init_demo(kernel) {
 
   video = document.getElementById("video");
   c1 = document.getElementById("c1");
-  ctx1 = c1.getContext("2d");
+  ctx1 = c1.getContext("2d", { willReadFrequently: true });
   c2 = document.getElementById("c2");
   ctx2 = c2.getContext("2d");
   c3 = document.getElementById("c3");
