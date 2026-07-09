@@ -367,19 +367,28 @@ let pp_funcs (fmt : formatter) (funcs : func list) : unit =
 
 (* -------------------------------------------------------------------- *)
 
-let pp_mem (fmt : formatter) (mem : mem) : unit =
-  match mem.mem_max with
-  | None ->
-    fprintf fmt {|(import "%a" "%a" (memory %a))|}
-      pp_name mem.mem_env
-      pp_name mem.mem_name
-      pp_num mem.mem_min
+let pp_mem_args (fmt : formatter) ((min, max) : (num * num option)) : unit =
+  match max with
+  | None -> fprintf fmt "%a" pp_num min
   | Some max ->
-    fprintf fmt {|(import "%a" "%a" (memory %a %a))|}
-      pp_name mem.mem_env
-      pp_name mem.mem_name
-      pp_num mem.mem_min
+    fprintf fmt "%a %a"
+      pp_num min
       pp_num max
+
+let pp_mem (fmt : formatter) ({ mem_link; mem_env; mem_name; mem_min; mem_max } : mem) : unit =
+  match mem_link, mem_env with
+  | Import, Some mem_env ->
+      fprintf fmt {|(import "%a" "%a" (memory $%a %a))|}
+      pp_name mem_env
+      pp_name mem_name
+      pp_name mem_name
+      pp_mem_args (mem_min, mem_max)
+  | Export, None ->
+      fprintf fmt {|(memory $%a (export "%a") %a)|}
+      pp_name mem_name
+      pp_name mem_name
+      pp_mem_args (mem_min, mem_max)
+  | _ -> failwith "Instruction not well-formed"
 
 let pp_mems (fmt : formatter) (mems : mem list) : unit =
   pp_print_list ~pp_sep:pp_sep_double_space pp_mem fmt mems

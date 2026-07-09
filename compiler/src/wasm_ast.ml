@@ -67,8 +67,13 @@ type var = {
 
 (* -------------------------------------------------------------------- *)
 
+type linkage =
+  | Import
+  | Export
+
 type mem = {
-  mem_env : name;
+  mem_link : linkage;
+  mem_env : name option;
   mem_name : name;
   mem_min : num;
   mem_max : num option;

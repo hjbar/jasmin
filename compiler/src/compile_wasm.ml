@@ -477,13 +477,14 @@ let compiler_back_end ~(mod_name : Wasm_ast.name) (sprog : ('reg, 'regx, 'xreg, 
     Format.eprintf "/* START jasmin to wasm */@."
   end;
 
-  let mem_env = "env" in
+  let (mem_link, mem_env) = Wasm_ast.(if !export_memory then (Export, None) else (Import, Some "env")) in
   let mem_name = "memory" in
   let mem_min = Z.of_int 1 in
+  let mem_max = None in
   let import_env = "env" in
   let rip_addr = Z.of_int 10000 in
 
-  let compiled_prog = Jasmin_to_wasm.compile_prog ~mod_name ~mem_env ~mem_name ~mem_min ~import_env ~rip_addr sprog in
+  let compiled_prog = Jasmin_to_wasm.compile_prog ~mod_name ~mem_link ~mem_env ~mem_name ~mem_min ~mem_max ~import_env ~rip_addr sprog in
   let headers = Wasm_headers.compute_headers funcs in
 
   if !debug then begin
