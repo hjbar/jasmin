@@ -290,18 +290,33 @@ and pp_get (fmt : formatter) (access : access) (scope : scope) (var : var) : uni
     fprintf fmt "(%a.get $%a)"
       pp_scope scope
       pp_var var
-  | ArrayAccess (ref_ty, instr) ->
+  | ArrayAccess (ref_ty, None, instr) ->
     fprintf fmt "(array.get $%a (%a.get $%a) %a)"
       pp_name ref_ty
       pp_scope scope
       pp_var var
       pp_instr instr
-  | StructAccess (ref_ty, field_name) ->
+  | ArrayAccess (ref_ty, Some sign, instr) ->
+    fprintf fmt "(array.get_%a $%a (%a.get $%a) %a)"
+      pp_sign sign
+      pp_name ref_ty
+      pp_scope scope
+      pp_var var
+      pp_instr instr
+  | StructAccess (ref_ty, None, field_name) ->
     fprintf fmt "(struct.get $%a $%a (%a.get $%a))"
       pp_name ref_ty
       pp_name field_name
       pp_scope scope
       pp_var var
+  | StructAccess (ref_ty, Some sign, field_name) ->
+    fprintf fmt "(struct.get_%a $%a $%a (%a.get $%a))"
+      pp_sign sign
+      pp_name ref_ty
+      pp_name field_name
+      pp_scope scope
+      pp_var var
+
 
 and pp_set (fmt : formatter) (access : access) (scope : scope) (var : var) (instr_opt : instr option) : unit =
   match access, instr_opt with
@@ -314,32 +329,33 @@ and pp_set (fmt : formatter) (access : access) (scope : scope) (var : var) (inst
       pp_scope scope
       pp_var var
       pp_instr instr
-  | ArrayAccess (ref_ty, idx), None ->
+  | ArrayAccess (ref_ty, None, idx), None ->
     fprintf fmt "(array.set $%a (%a.get $%a) %a)"
       pp_name ref_ty
       pp_scope scope
       pp_var var
       pp_instr idx
-  | ArrayAccess (ref_ty, idx), Some instr ->
+  | ArrayAccess (ref_ty, None, idx), Some instr ->
     fprintf fmt "@[<hv 2>(array.set $%a (%a.get $%a) %a@ %a)@]"
       pp_name ref_ty
       pp_scope scope
       pp_var var
       pp_instr idx
       pp_instr instr
-  | StructAccess (ref_ty, field_name), None ->
+  | StructAccess (ref_ty, None, field_name), None ->
     fprintf fmt "(struct.set $%a $%a (%a.get %a))"
       pp_name ref_ty
       pp_name field_name
       pp_scope scope
       pp_var var
-  | StructAccess (ref_ty, field_name), Some instr ->
+  | StructAccess (ref_ty, None, field_name), Some instr ->
     fprintf fmt "@[<hv 2>(struct.set $%a $%a (%a.get %a)@ %a)@]"
       pp_name ref_ty
       pp_name field_name
       pp_scope scope
       pp_var var
       pp_instr instr
+  | _ -> failwith "Instruction not well-formed"
 
 (* -------------------------------------------------------------------- *)
 

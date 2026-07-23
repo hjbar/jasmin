@@ -1,0 +1,19 @@
+(func $len_array_TYPE1 (param $arr (ref $array_TYPE1)) (result i32)
+  (array.len (local.get $arr))
+)
+
+(func $get_u_array_TYPE1 (param $arr (ref $array_TYPE1)) (param $idx i32) (result TYPE2)
+  (array.get_u $array_TYPE1 (local.get $arr) (local.get $idx))
+)
+
+(func $get_s_array_TYPE1 (param $arr (ref $array_TYPE1)) (param $idx i32) (result TYPE2)
+  (array.get_s $array_TYPE1 (local.get $arr) (local.get $idx))
+)
+
+(func $set_array_TYPE1 (param $arr (ref $array_TYPE1)) (param $idx i32) (param $val TYPE2)
+  (array.set $array_TYPE1 (local.get $arr) (local.get $idx) (local.get $val))
+)
+
+(func $new_array_TYPE1 (param $default TYPE2) (param $len i32) (result (ref $array_TYPE1))
+  (array.new $array_TYPE1 (local.get $default) (local.get $len))
+)

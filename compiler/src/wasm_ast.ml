@@ -154,8 +154,8 @@ and instrs = instr list
 
 and access =
   | VarAccess
-  | ArrayAccess of ref_ty * instr
-  | StructAccess of ref_ty * field_name
+  | ArrayAccess of ref_ty * sign option * instr
+  | StructAccess of ref_ty * sign option * field_name
 
 (* -------------------------------------------------------------------- *)
 

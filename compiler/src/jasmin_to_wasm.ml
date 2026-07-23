@@ -113,8 +113,11 @@ let const_vec_ vec_ty simd_ty nums =
 let get_var_ scope var =
   Get (VarAccess, scope, var)
 
-let get_array_ ref_ty instr scope var =
-  Get (ArrayAccess (ref_ty, instr), scope, var)
+let get_array_unpack_ ref_ty instr scope var =
+  Get (ArrayAccess (ref_ty, None, instr), scope, var)
+
+let get_array_pack_ ref_ty sign instr scope var =
+  Get (ArrayAccess (ref_ty, Some sign, instr), scope, var)
 
 let set_var_ scope var instr =
   Set (VarAccess, scope, var, Some instr)
@@ -123,7 +126,7 @@ let set_var_stack_ scope var =
   Set (VarAccess, scope, var, None)
 
 let set_array_ ref_ty ~idx scope var instr =
-  Set (ArrayAccess (ref_ty, idx), scope, var, Some instr)
+  Set (ArrayAccess (ref_ty, None, idx), scope, var, Some instr)
 
 let load_ ty instr =
   check_ty ty;
@@ -533,7 +536,7 @@ let rec gexpr_to_instr ~(funname : funname) ~(i_loc : Location.i_loc) (gexpr : '
     let instr = gexpr_to_instr gexpr in
     let scope = ggvar_to_scope ggvar in
     let var = ggvar_to_var ggvar in
-    get_array_ ref_ty instr scope var
+    get_array_unpack_ ref_ty instr scope var
   | Pload (_aligned, ((U32 | U64 | U128) as wsize), gexpr) ->
     let ty = wsize_to_ty wsize in
     let instr = gexpr_to_instr gexpr in
@@ -597,7 +600,7 @@ and unop_to_instr ~(funname : funname) ~(i_loc : Location.i_loc) (op : Operators
     let idx = gexpr_to_instr gexpr in
     let scope = ggvar_to_scope ggvar in
     let var = ggvar_to_var ggvar in
-    let instr = get_array_ ref_ty idx scope var in
+    let instr = get_array_pack_ ref_ty sign idx scope var in
 
     if      desired = U32 then instr
     else if desired = U64 then Unop (Extend sign, instr)
