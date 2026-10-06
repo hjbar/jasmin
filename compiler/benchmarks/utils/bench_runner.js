@@ -1,6 +1,7 @@
 // Import libraries
 const fs = require('fs');
 const path = require('path');
+const { WASI } = require('wasi');
 
 
 // Parse the command line
@@ -31,6 +32,27 @@ async function initWasm(dir, filename) {
 
   const { instance } = await WebAssembly.instantiate(wasmBuffer, importObject);
   return { exports: instance.exports, memory };
+
+}
+
+
+// Init Wasm module compiled with Emcc
+async function initWasmEmcc(dir, filename) {
+
+  const wasmPath = path.resolve(dir, 'c_wasm', filename);
+  const wasmBuffer = fs.readFileSync(wasmPath);
+
+  const wasi = new WASI({ version: 'preview1' });
+  const importObject = wasi.getImportObject();
+
+  const { instance } = await WebAssembly.instantiate(wasmBuffer, importObject);
+
+  wasi.initialize(instance);
+  if (instance.exports._start) {
+    wasi.start(instance);
+  }
+
+  return { exports: instance.exports, memory: instance.exports.memory };
 
 }
 
@@ -87,6 +109,7 @@ function reportStats(results, NB_REPEAT, NB_ITER) {
 module.exports = {
   parseArgs,
   initWasm,
+  initWasmEmcc,
   runCoreBenchmark,
   reportStats,
 };

@@ -96,7 +96,7 @@ globalThis.require = function(modulePath) {
 
         if (!cleanPath.startsWith(currentDir) && currentDir !== '.') {
           cleanPath = currentDir + '/' + cleanPath;
-        } else if (cleanPath.startsWith('prog/') && typeof globalThis.__currentAlgoDir !== 'undefined') {
+        } else if ((cleanPath.startsWith('prog/') || cleanPath.startsWith('c_wasm/')) && typeof globalThis.__currentAlgoDir !== 'undefined') {
           cleanPath = globalThis.__currentAlgoDir + '/' + cleanPath;
         }
 
@@ -123,6 +123,43 @@ globalThis.require = function(modulePath) {
 
   if (modulePath === 'buffer') {
     return { Buffer: globalThis.Buffer };
+  }
+
+  if (modulePath === 'wasi') {
+    return {
+      WASI: class {
+        constructor(options) {
+          this.version = options?.version || 'preview1';
+        }
+
+        getImportObject() {
+          return {
+            wasi_snapshot_preview1: {
+              proc_exit: (code) => { globalThis.process.exit(code); },
+              fd_write: () => 0,
+              fd_close: () => 0,
+              fd_seek: () => 0,
+              environ_sizes_get: () => 0,
+              environ_get: () => 0,
+              clock_time_get: () => 0,
+              random_get: (buf, bufLen) => {
+                if (this.instance && this.instance.exports && this.instance.exports.memory) {
+                  const mem = new Uint8Array(this.instance.exports.memory.buffer, buf, bufLen);
+                  for (let i = 0; i < bufLen; i++) {
+                    mem[i] = Math.floor(Math.random() * 256);
+                  }
+                }
+                return 0;
+              }
+            }
+          };
+        }
+
+        initialize(instance) {}
+
+        start(instance) {}
+      }
+    };
   }
 
   const currentDir = dirStack[dirStack.length - 1];

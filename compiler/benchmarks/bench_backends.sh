@@ -107,8 +107,8 @@ run_benchmark() {
   local algo_args=("${@:4}")
 
   local iter_id=${4:-"default"}
-  local LOG_FILE="$LOG_DIR/log_verbose_${name}_${loop_repeat}_${iter_id}.txt"
-  local LATEX_FILE="$LATEX_DIR/latex_${name}_${loop_repeat}_${iter_id}.txt"
+  local LOG_FILE="$LOG_DIR/log_verbose_backends_${name}_${loop_repeat}_${iter_id}.txt"
+  local LATEX_FILE="$LATEX_DIR/latex_backends_${name}_${loop_repeat}_${iter_id}.txt"
 
 
   # start log file
@@ -324,7 +324,7 @@ run_benchmark() {
 
 
   # make short log file
-  local LOG_FILE_SHORT="$LOG_DIR/log_${name}_${loop_repeat}_${iter_id}.txt"
+  local LOG_FILE_SHORT="$LOG_DIR/log_backends_${name}_${loop_repeat}_${iter_id}.txt"
   grep -vE "^($EXCLUDE_PREFIXES)" "$LOG_FILE" > "$LOG_FILE_SHORT"
 }
 

@@ -82,13 +82,13 @@ DIRNAMES=(
   "$CHACHA20XORAVX" "$CHACHA20XORAVX_OPT"
 )
 
-LOG_NAME="log_verbose_${NB_REPEAT}.txt"
+LOG_NAME="log_verbose_backends_${NB_REPEAT}.txt"
 LOG_FILE="$LOG_DIR/$LOG_NAME"
 
-LOG_NAME_SHORT="log_${NB_REPEAT}.txt"
+LOG_NAME_SHORT="log_backends_${NB_REPEAT}.txt"
 LOG_FILE_SHORT="$LOG_DIR/$LOG_NAME_SHORT"
 
-LATEX_NAME="latex_${NB_REPEAT}.txt"
+LATEX_NAME="latex_backends_${NB_REPEAT}.txt"
 LATEX_FILE="$LATEX_DIR/$LATEX_NAME"
 
 SEP1="########################################################################################"
@@ -111,9 +111,9 @@ bench() {
   # Run scripts
   for dir_name in "${DIRNAMES[@]}"; do
     if [ "$ALL" = true ]; then
-      bash "$ROOT_DIR/bench.sh" -a $dir_name $NB_REPEAT
+      bash "$ROOT_DIR/bench_backends.sh" -a $dir_name $NB_REPEAT
     else
-      bash "$ROOT_DIR/bench.sh" $dir_name $NB_REPEAT
+      bash "$ROOT_DIR/bench_backends.sh" $dir_name $NB_REPEAT
     fi
   done
 }
@@ -122,8 +122,8 @@ bench() {
 # Remove logs
 remove_logs() {
   for dir_name in "${DIRNAMES[@]}"; do
-    rm -rf "$ROOT_DIR/$dir_name/logs/log_verbose_"*"_${NB_REPEAT}_"*.txt
-    rm -rf "$ROOT_DIR/$dir_name/logs/log_"*"_${NB_REPEAT}_"*.txt
+    rm -rf "$ROOT_DIR/$dir_name/logs/log_verbose_backends_"*"_${NB_REPEAT}_"*.txt
+    rm -rf "$ROOT_DIR/$dir_name/logs/log_backends_"*"_${NB_REPEAT}_"*.txt
   done
 
   rm -rf "$LOG_FILE"
@@ -142,7 +142,7 @@ make_logs() {
 
   for dir_name in "${DIRNAMES[@]}"; do
 
-    SEARCH="log_verbose_*_${NB_REPEAT}_*.txt"
+    SEARCH="log_verbose_backends_*_${NB_REPEAT}_*.txt"
     find "$ROOT_DIR/$dir_name/logs" -type f -name "$SEARCH" | sort -t '_' -k 4 -rn | while read -r current_log; do
       {
         echo ""
@@ -155,7 +155,7 @@ make_logs() {
       } >> "$LOG_FILE"
     done
 
-    SEARCH_SHORT="log_*_${NB_REPEAT}_*.txt"
+    SEARCH_SHORT="log_backends_*_${NB_REPEAT}_*.txt"
     find "$ROOT_DIR/$dir_name/logs" -type f -name "$SEARCH_SHORT" ! -name "$SEARCH" | sort -t '_' -k 4 -rn | while read -r current_log; do
       {
         echo ""
@@ -175,7 +175,7 @@ make_logs() {
 # Remove latex
 remove_latex() {
   for dir_name in "${DIRNAMES[@]}"; do
-    rm -rf "$ROOT_DIR/$dir_name/latex/latex_"*"_${NB_REPEAT}_"*.txt
+    rm -rf "$ROOT_DIR/$dir_name/latex/latex_backends_"*"_${NB_REPEAT}_"*.txt
   done
 
   rm -rf "$LATEX_FILE"
@@ -192,7 +192,7 @@ make_latex() {
 
   for dir_name in "${DIRNAMES[@]}"; do
 
-    SEARCH="latex_*_${NB_REPEAT}_*.txt"
+    SEARCH="latex_backends_*_${NB_REPEAT}_*.txt"
     find "$ROOT_DIR/$dir_name/latex" -type f -name "$SEARCH" | sort -t '_' -k 4 -rn | while read -r current_latex; do
       cat "$current_latex" >> "$LATEX_FILE"
     done
