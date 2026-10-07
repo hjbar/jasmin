@@ -25,7 +25,7 @@ let fresh_fig =
 let round_max max = (floor (max *. 20.) +. 1.) /. 20.
 
 (* Make plots from data *)
-let make_single_plot value_kind legend caption Data.{ names; values } =
+let make_single_plot value_kind legend caption Data_backends.{ names; values } =
   let numbers = Hashtbl.find values value_kind in
 
   let first_line = [ "Labels"; "Values" ] in

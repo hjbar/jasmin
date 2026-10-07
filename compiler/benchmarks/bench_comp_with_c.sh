@@ -251,11 +251,11 @@ run_benchmark() {
 
 
   # results
-  diff_native=$(echo "scale=6; $time_jazz_x86 / $time_c_exe" | bc -l)
-  LC_NUMERIC=C printf "\nRatio between JAZZ-->X86-->EXE and C-->EXE : %.6f\n" "$diff_native" | tee -a "$LOG_FILE"
+  diff_native=$(echo "scale=6; $time_c_exe / $time_jazz_x86" | bc -l)
+  LC_NUMERIC=C printf "\nRatio between C-->EXE and JAZZ-->X86-->EXE : %.6f\n" "$diff_native" | tee -a "$LOG_FILE"
 
-  diff_wasm=$(echo "scale=6; $time_jazz_wasm / $time_c_wasm" | bc -l)
-  LC_NUMERIC=C printf "\nRatio between JAZZ-->WASM (%s) and C-->WASM (%s) : %.6f\n" "$name_jazz_wasm" "$name_c_wasm" "$diff_wasm" | tee -a "$LOG_FILE"
+  diff_wasm=$(echo "scale=6; $time_c_wasm / $time_jazz_wasm" | bc -l)
+  LC_NUMERIC=C printf "\nRatio between C-->WASM (%s) and JAZZ-->WASM (%s) : %.6f\n" "$name_c_wasm" "$name_jazz_wasm" "$diff_wasm" | tee -a "$LOG_FILE"
 
   final_diff=$(echo "scale=6; $diff_wasm / $diff_native" | bc -l)
   LC_NUMERIC=C printf "\nRatio between WASM and native : %.6f\n" "$final_diff" | tee -a "$LOG_FILE"
@@ -277,8 +277,8 @@ run_benchmark() {
   LC_NUMERIC=C printf "\nJAZZ-->WASM (%s) : %.6f\n" "$name_jazz_wasm" "$time_jazz_wasm" | tee -a "$LOG_FILE"
 
   # All
-  LC_NUMERIC=C printf "\nJAZZ-->X86-->EXE / C-->EXE : %.6f\n" "$diff_native" | tee -a "$LOG_FILE"
-  LC_NUMERIC=C printf "\nJAZZ-->WASM (%s) / C-->WASM (%s) : %.6f\n" "$name_jazz_wasm" "$name_c_wasm" "$diff_wasm" | tee -a "$LOG_FILE"
+  LC_NUMERIC=C printf "\nC-->EXE / JAZZ-->X86-->EXE : %.6f\n" "$diff_native" | tee -a "$LOG_FILE"
+  LC_NUMERIC=C printf "\nC-->WASM (%s) / JAZZ-->WASM (%s) : %.6f\n" "$name_c_wasm" "$name_jazz_wasm" "$diff_wasm" | tee -a "$LOG_FILE"
   LC_NUMERIC=C printf "\nWASM / EXE : %.6f\n" "$final_diff" | tee -a "$LOG_FILE"
 
   # Latex

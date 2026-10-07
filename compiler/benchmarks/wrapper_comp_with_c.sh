@@ -176,7 +176,7 @@ make_latex() {
   mkdir -p "$LATEX_DIR"
 
   # Make the global latex
-  echo "Algorithm name;Is opt algorithm;Time C-->X86;Time JAZZ-->X86-->EXE;Time C-->WASM;Time JAZZ-->WASM;Ratio JAZZ-->EXE/C-->EXE;Ratio JAZZ-->WASM / C-->WASM;Ratio WASM/EXE;" > "$LATEX_FILE"
+  echo "Algorithm name;Is opt algorithm;Time C-->X86;Time JAZZ-->X86-->EXE;Time C-->WASM;Time JAZZ-->WASM;Ratio C-->EXE / JAZZ-->EXE;Ratio C-->WASM / JAZZ-->WASM;Ratio EXE / WASM;" > "$LATEX_FILE"
 
   for dir_name in "${DIRNAMES[@]}"; do
 
