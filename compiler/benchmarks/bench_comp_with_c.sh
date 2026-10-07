@@ -124,7 +124,7 @@ generate_string() {
 
 
 extract_time() {
-  echo "$1" | grep "Mean time" | grep -oE '[0-9]+\.[0-9]+'
+  echo "$1" | grep "Avg per call" | grep -oE '[0-9]+\.[0-9]+'
 }
 
 
@@ -133,7 +133,11 @@ run_benchmark() {
   local bench_note=$1
   local is_opt=$2
   local loop_repeat=$3
-  local algo_args=("${@:4}")
+  local loop_iter=$4
+  local loop_iter_2=$(( loop_iter + (loop_iter / 20) ))
+  local loop_iter_3=$(( loop_iter - (loop_iter / 5) ))
+  local loop_iter_4=$(( loop_iter - (loop_iter / 3) ))
+  local algo_args=("${@:5}")
 
   local iter_id=${4:-"default"}
   local LOG_FILE="$LOG_DIR/log_verbose_comp_with_c_${name}_${loop_repeat}_${iter_id}.txt"
@@ -147,7 +151,7 @@ run_benchmark() {
 
 
   # COMPILE C-->EXE
-  res_c_exe=$(taskset --cpu-list 0 "$f_ce_exe" "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  res_c_exe=$(taskset --cpu-list 0 "$f_ce_exe" "$loop_repeat" "$loop_iter_2" "${algo_args[@]}" "$VERBOSE")
   time_c_exe=$(extract_time "$res_c_exe")
   printf "\nC-->EXE :\n\n%s\n" "$res_c_exe" | tee -a "$LOG_FILE"
 
@@ -155,7 +159,7 @@ run_benchmark() {
 
 
   # JAZZ-->X86-->EXE
-  res_jazz_x86=$(taskset --cpu-list 0 "$f_exe" "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  res_jazz_x86=$(taskset --cpu-list 0 "$f_exe" "$loop_repeat" "$loop_iter" "${algo_args[@]}" "$VERBOSE")
   time_jazz_x86=$(extract_time "$res_jazz_x86")
   printf "\nJAZZ-->X86-->EXE :\n\n%s\n" "$res_jazz_x86" | tee -a "$LOG_FILE"
 
@@ -175,13 +179,13 @@ run_benchmark() {
     -o "$f_cw_wasm"
   wasm2wat --fold-exprs "$f_cw_wasm" -o "$f_cw_wat_O0"
 
-  res_c_wasm=$(taskset --cpu-list 0 node --no-warnings "$f_cw_js" "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  res_c_wasm=$(taskset --cpu-list 0 node --no-warnings "$f_cw_js" "$loop_repeat" "$loop_iter_3" "${algo_args[@]}" "$VERBOSE")
   time_c_wasm=$(extract_time "$res_c_wasm")
   name_c_wasm="emcc -O0 [Node]"
   printf "\nC-->WASM [using Node and emcc -O0] :\n\n%s\n" "$res_c_wasm" | tee -a "$LOG_FILE"
   printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
 
-  res_c_wasm_tmp=$(taskset --cpu-list 0 "$SPIDER_MONKEY" -f "$f_ff_pf" -f "$f_cw_js" -- "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  res_c_wasm_tmp=$(taskset --cpu-list 0 "$SPIDER_MONKEY" -f "$f_ff_pf" -f "$f_cw_js" -- "$loop_repeat" "$loop_iter_4" "${algo_args[@]}" "$VERBOSE")
   time_c_wasm_tmp=$(extract_time "$res_c_wasm_tmp")
   printf "\nC-->WASM [using Firefox and emcc -O0] :\n\n%s\n" "$res_c_wasm_tmp" | tee -a "$LOG_FILE"
   printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
@@ -201,7 +205,7 @@ run_benchmark() {
     -o "$f_cw_wasm"
   wasm2wat --fold-exprs "$f_cw_wasm" -o "$f_cw_wat_O2"
 
-  res_c_wasm_tmp=$(taskset --cpu-list 0 node --no-warnings "$f_cw_js" "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  res_c_wasm_tmp=$(taskset --cpu-list 0 node --no-warnings "$f_cw_js" "$loop_repeat" "$loop_iter_3" "${algo_args[@]}" "$VERBOSE")
   time_c_wasm_tmp=$(extract_time "$res_c_wasm_tmp")
   printf "\nC-->WASM [using Node and emcc -O2] :\n\n%s\n" "$res_c_wasm_tmp" | tee -a "$LOG_FILE"
   printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
@@ -210,7 +214,7 @@ run_benchmark() {
     name_c_wasm="emcc -O2 [Node]"
   fi
 
-  res_c_wasm_tmp=$(taskset --cpu-list 0 "$SPIDER_MONKEY" -f "$f_ff_pf" -f "$f_cw_js" -- "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  res_c_wasm_tmp=$(taskset --cpu-list 0 "$SPIDER_MONKEY" -f "$f_ff_pf" -f "$f_cw_js" -- "$loop_repeat" "$loop_iter_4" "${algo_args[@]}" "$VERBOSE")
   time_c_wasm_tmp=$(extract_time "$res_c_wasm_tmp")
   printf "\nC-->WASM [using Firefox and emcc -O2] :\n\n%s\n" "$res_c_wasm_tmp" | tee -a "$LOG_FILE"
   printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
@@ -230,7 +234,7 @@ run_benchmark() {
     -o "$f_cw_wasm"
   wasm2wat --fold-exprs "$f_cw_wasm" -o "$f_cw_wat_O3"
 
-  res_c_wasm_tmp=$(taskset --cpu-list 0 node --no-warnings "$f_cw_js" "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  res_c_wasm_tmp=$(taskset --cpu-list 0 node --no-warnings "$f_cw_js" "$loop_repeat" "$loop_iter_3" "${algo_args[@]}" "$VERBOSE")
   time_c_wasm_tmp=$(extract_time "$res_c_wasm_tmp")
   printf "\nC-->WASM [using Node and emcc -O3] :\n\n%s\n" "$res_c_wasm_tmp" | tee -a "$LOG_FILE"
   printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
@@ -239,7 +243,7 @@ run_benchmark() {
     name_c_wasm="emcc -O3 [Node]"
   fi
 
-  res_c_wasm_tmp=$(taskset --cpu-list 0 "$SPIDER_MONKEY" -f "$f_ff_pf" -f "$f_cw_js" -- "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  res_c_wasm_tmp=$(taskset --cpu-list 0 "$SPIDER_MONKEY" -f "$f_ff_pf" -f "$f_cw_js" -- "$loop_repeat" "$loop_iter_4" "${algo_args[@]}" "$VERBOSE")
   time_c_wasm_tmp=$(extract_time "$res_c_wasm_tmp")
   printf "\nC-->WASM [using Firefox and emcc -O3] :\n\n%s\n" "$res_c_wasm_tmp" | tee -a "$LOG_FILE"
   printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
@@ -254,13 +258,13 @@ run_benchmark() {
   # wasm-as
   wasm-as --all-features "$f_wat" -o "$f_wasm"
 
-  res_jazz_wasm=$(taskset --cpu-list 0 node --no-warnings "$f_js" "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  res_jazz_wasm=$(taskset --cpu-list 0 node --no-warnings "$f_js" "$loop_repeat" "$loop_iter" "${algo_args[@]}" "$VERBOSE")
   time_jazz_wasm=$(extract_time "$res_jazz_wasm")
   name_jazz_wasm="wasm-as [Node]"
   printf "\nJAZZ-->WASM [using Node and wasm-as] :\n\n%s\n" "$res_jazz_wasm" | tee -a "$LOG_FILE"
   printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
 
-  res_jazz_wasm_tmp=$(taskset --cpu-list 0 "$SPIDER_MONKEY" -f "$f_ff_pf" -f "$f_js" -- "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  res_jazz_wasm_tmp=$(taskset --cpu-list 0 "$SPIDER_MONKEY" -f "$f_ff_pf" -f "$f_js" -- "$loop_repeat" "$loop_iter" "${algo_args[@]}" "$VERBOSE")
   time_jazz_wasm_tmp=$(extract_time "$res_jazz_wasm_tmp")
   printf "\nJAZZ-->WASM [using Firefox and wasm-as] :\n\n%s\n" "$res_jazz_wasm_tmp" | tee -a "$LOG_FILE"
   printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
@@ -272,7 +276,7 @@ run_benchmark() {
   # wasm-opt -O3
   wasm-opt -O3 --all-features "$f_wat" -o "$f_wasm"
 
-  res_jazz_wasm_tmp=$(taskset --cpu-list 0 node --no-warnings "$f_js" "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  res_jazz_wasm_tmp=$(taskset --cpu-list 0 node --no-warnings "$f_js" "$loop_repeat" "$loop_iter" "${algo_args[@]}" "$VERBOSE")
   time_jazz_wasm_tmp=$(extract_time "$res_jazz_wasm_tmp")
   printf "\nJAZZ-->WASM [using Node and wasm-opt -O3] :\n\n%s\n" "$res_jazz_wasm_tmp" | tee -a "$LOG_FILE"
   printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
@@ -281,7 +285,7 @@ run_benchmark() {
     name_jazz_wasm="wasm-opt -O3 [Node]"
   fi
 
-  res_jazz_wasm_tmp=$(taskset --cpu-list 0 "$SPIDER_MONKEY" -f "$f_ff_pf" -f "$f_js" -- "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  res_jazz_wasm_tmp=$(taskset --cpu-list 0 "$SPIDER_MONKEY" -f "$f_ff_pf" -f "$f_js" -- "$loop_repeat" "$loop_iter" "${algo_args[@]}" "$VERBOSE")
   time_jazz_wasm_tmp=$(extract_time "$res_jazz_wasm_tmp")
   printf "\nJAZZ-->WASM [using Firefox and wasm-opt -O3] :\n\n%s\n" "$res_jazz_wasm_tmp" | tee -a "$LOG_FILE"
   printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
@@ -293,7 +297,7 @@ run_benchmark() {
   # wasm-opt -O4
   wasm-opt -O4 --all-features "$f_wat" -o "$f_wasm"
 
-  res_jazz_wasm_tmp=$(taskset --cpu-list 0 node --no-warnings "$f_js" "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  res_jazz_wasm_tmp=$(taskset --cpu-list 0 node --no-warnings "$f_js" "$loop_repeat" "$loop_iter" "${algo_args[@]}" "$VERBOSE")
   time_jazz_wasm_tmp=$(extract_time "$res_jazz_wasm_tmp")
   printf "\nJAZZ-->WASM [using Node and wasm-opt -O4] :\n\n%s\n" "$res_jazz_wasm_tmp" | tee -a "$LOG_FILE"
   printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
@@ -302,7 +306,7 @@ run_benchmark() {
     name_jazz_wasm="wasm-opt -O4 [Node]"
   fi
 
-  res_jazz_wasm_tmp=$(taskset --cpu-list 0 "$SPIDER_MONKEY" -f "$f_ff_pf" -f "$f_js" -- "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  res_jazz_wasm_tmp=$(taskset --cpu-list 0 "$SPIDER_MONKEY" -f "$f_ff_pf" -f "$f_js" -- "$loop_repeat" "$loop_iter" "${algo_args[@]}" "$VERBOSE")
   time_jazz_wasm_tmp=$(extract_time "$res_jazz_wasm_tmp")
   printf "\nJAZZ-->WASM [using Firefox and wasm-opt -O4] :\n\n%s\n" "$res_jazz_wasm_tmp" | tee -a "$LOG_FILE"
   printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
