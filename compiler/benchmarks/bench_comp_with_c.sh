@@ -81,7 +81,9 @@ gcc -O3 "$f_ce_c" -lsodium -lm -o "$f_ce_exe"
 
 # COMPILE C-->WASM
 f_cw_c="$ROOT_DIR/c_wasm/${name}_wasm.c"
-f_cw_wat="$ROOT_DIR/c_wasm/${name}_wasm.wat"
+f_cw_wat_O0="$ROOT_DIR/c_wasm/${name}_wasm_O0.wat"
+f_cw_wat_O2="$ROOT_DIR/c_wasm/${name}_wasm_O2.wat"
+f_cw_wat_O3="$ROOT_DIR/c_wasm/${name}_wasm_O3.wat"
 f_cw_wasm="$ROOT_DIR/c_wasm/${name}_wasm.wasm"
 f_cw_js="$ROOT_DIR/main_emcc.js"
 
@@ -90,16 +92,6 @@ if [[ "$name" == *avx* ]]; then
 else
   SODIUM_VERSION="$SODIUM_JS_PATH"
 fi
-
-emcc \
-  -O3 -msimd128 -mssse3 "$f_cw_c" \
-  -I"$SODIUM_VERSION"/include \
-  "$SODIUM_VERSION"/lib/libsodium.a \
-  -s WASM=1 \
-  -s STANDALONE_WASM=1 \
-  --no-entry \
-  -o "$f_cw_wasm"
-wasm2wat "$f_cw_wasm" -o "$f_cw_wat"
 
 
 # COMPILE JAZZ-->X86-->EXE
@@ -171,19 +163,89 @@ run_benchmark() {
 
 
   # COMPILE C-->WASM
+
+  # emcc -O0
+  emcc \
+    -O0 -msimd128 -msse2 -mssse3 "$f_cw_c" \
+    -I"$SODIUM_VERSION"/include \
+    "$SODIUM_VERSION"/lib/libsodium.a \
+    -s WASM=1 \
+    -s STANDALONE_WASM=1 \
+    --no-entry \
+    -o "$f_cw_wasm"
+  wasm2wat --fold-exprs "$f_cw_wasm" -o "$f_cw_wat_O0"
+
   res_c_wasm=$(taskset --cpu-list 0 node --no-warnings "$f_cw_js" "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
   time_c_wasm=$(extract_time "$res_c_wasm")
-  name_c_wasm="emcc [Node]"
-  printf "\nC-->WASM [using Node and emcc] :\n\n%s\n" "$res_c_wasm" | tee -a "$LOG_FILE"
+  name_c_wasm="emcc -O0 [Node]"
+  printf "\nC-->WASM [using Node and emcc -O0] :\n\n%s\n" "$res_c_wasm" | tee -a "$LOG_FILE"
   printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
 
   res_c_wasm_tmp=$(taskset --cpu-list 0 "$SPIDER_MONKEY" -f "$f_ff_pf" -f "$f_cw_js" -- "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
   time_c_wasm_tmp=$(extract_time "$res_c_wasm_tmp")
-  printf "\nC-->WASM [using Firefox and emcc] :\n\n%s\n" "$res_c_wasm_tmp" | tee -a "$LOG_FILE"
+  printf "\nC-->WASM [using Firefox and emcc -O0] :\n\n%s\n" "$res_c_wasm_tmp" | tee -a "$LOG_FILE"
   printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
   if [ "$(echo "$time_c_wasm_tmp < $time_c_wasm" | bc -l)" -eq 1 ]; then
     time_c_wasm=$time_c_wasm_tmp
-    name_c_wasm="emcc [Firefox]"
+    name_c_wasm="emcc -O0 [Firefox]"
+  fi
+
+  # emcc -O2
+  emcc \
+    -O2 -msimd128 -msse2 -mssse3 "$f_cw_c" \
+    -I"$SODIUM_VERSION"/include \
+    "$SODIUM_VERSION"/lib/libsodium.a \
+    -s WASM=1 \
+    -s STANDALONE_WASM=1 \
+    --no-entry \
+    -o "$f_cw_wasm"
+  wasm2wat --fold-exprs "$f_cw_wasm" -o "$f_cw_wat_O2"
+
+  res_c_wasm_tmp=$(taskset --cpu-list 0 node --no-warnings "$f_cw_js" "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  time_c_wasm_tmp=$(extract_time "$res_c_wasm_tmp")
+  printf "\nC-->WASM [using Node and emcc -O2] :\n\n%s\n" "$res_c_wasm_tmp" | tee -a "$LOG_FILE"
+  printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
+  if [ "$(echo "$time_c_wasm_tmp < $time_c_wasm" | bc -l)" -eq 1 ]; then
+    time_c_wasm=$time_c_wasm_tmp
+    name_c_wasm="emcc -O2 [Node]"
+  fi
+
+  res_c_wasm_tmp=$(taskset --cpu-list 0 "$SPIDER_MONKEY" -f "$f_ff_pf" -f "$f_cw_js" -- "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  time_c_wasm_tmp=$(extract_time "$res_c_wasm_tmp")
+  printf "\nC-->WASM [using Firefox and emcc -O2] :\n\n%s\n" "$res_c_wasm_tmp" | tee -a "$LOG_FILE"
+  printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
+  if [ "$(echo "$time_c_wasm_tmp < $time_c_wasm" | bc -l)" -eq 1 ]; then
+    time_c_wasm=$time_c_wasm_tmp
+    name_c_wasm="emcc -O2 [Firefox]"
+  fi
+
+  # emcc -O3
+  emcc \
+    -O3 -msimd128 -msse2 -mssse3 "$f_cw_c" \
+    -I"$SODIUM_VERSION"/include \
+    "$SODIUM_VERSION"/lib/libsodium.a \
+    -s WASM=1 \
+    -s STANDALONE_WASM=1 \
+    --no-entry \
+    -o "$f_cw_wasm"
+  wasm2wat --fold-exprs "$f_cw_wasm" -o "$f_cw_wat_O3"
+
+  res_c_wasm_tmp=$(taskset --cpu-list 0 node --no-warnings "$f_cw_js" "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  time_c_wasm_tmp=$(extract_time "$res_c_wasm_tmp")
+  printf "\nC-->WASM [using Node and emcc -O3] :\n\n%s\n" "$res_c_wasm_tmp" | tee -a "$LOG_FILE"
+  printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
+  if [ "$(echo "$time_c_wasm_tmp < $time_c_wasm" | bc -l)" -eq 1 ]; then
+    time_c_wasm=$time_c_wasm_tmp
+    name_c_wasm="emcc -O3 [Node]"
+  fi
+
+  res_c_wasm_tmp=$(taskset --cpu-list 0 "$SPIDER_MONKEY" -f "$f_ff_pf" -f "$f_cw_js" -- "$loop_repeat" "${algo_args[@]}" "$VERBOSE")
+  time_c_wasm_tmp=$(extract_time "$res_c_wasm_tmp")
+  printf "\nC-->WASM [using Firefox and emcc -O3] :\n\n%s\n" "$res_c_wasm_tmp" | tee -a "$LOG_FILE"
+  printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
+  if [ "$(echo "$time_c_wasm_tmp < $time_c_wasm" | bc -l)" -eq 1 ]; then
+    time_c_wasm=$time_c_wasm_tmp
+    name_c_wasm="emcc -O3 [Firefox]"
   fi
 
 
