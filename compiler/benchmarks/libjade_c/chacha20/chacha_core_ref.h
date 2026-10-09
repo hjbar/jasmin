@@ -8,8 +8,15 @@
 #define CHACHA_ROUNDS 20
 #endif
 
-static inline uint32_t rotl32(uint32_t x, int r) {
+static inline uint32_t ROL_32(uint32_t x, int r) {
+#if defined(__clang__) && __has_builtin(__builtin_rotateleft32)
+    return __builtin_rotateleft32(x, r);
+#elif defined(_MSC_VER)
+    #include <stdlib.h>
+    return _rotl(x, r);
+#else
     return (x << r) | (x >> (32 - r));
+#endif
 }
 
 static inline void __copy_state_ref(uint32_t k[16], uint32_t *s_k15, const uint32_t st[16]) {
@@ -24,7 +31,7 @@ static inline void __copy_state_ref(uint32_t k[16], uint32_t *s_k15, const uint3
 static inline void __line_ref(uint32_t k[16], int a, int b, int c, int r) {
     k[a] += k[b];
     k[c] ^= k[a];
-    k[c] = rotl32(k[c], r);
+    k[c] = ROL_32(k[c], r);
 }
 
 static inline void __quarter_round_ref(uint32_t k[16], int a, int b, int c, int d) {
@@ -83,8 +90,8 @@ static inline void __half_round_inline_ref(
     k[d0] ^= k[a0];
     k[d1] ^= k[a1];
 
-    k[d0] = rotl32(k[d0], 16);
-    k[d1] = rotl32(k[d1], 16);
+    k[d0] = ROL_32(k[d0], 16);
+    k[d1] = ROL_32(k[d1], 16);
 
     k[c0] += k[d0];
     k[c1] += k[d1];
@@ -92,8 +99,8 @@ static inline void __half_round_inline_ref(
     k[b0] ^= k[c0];
     k[b1] ^= k[c1];
 
-    k[b0] = rotl32(k[b0], 12);
-    k[b1] = rotl32(k[b1], 12);
+    k[b0] = ROL_32(k[b0], 12);
+    k[b1] = ROL_32(k[b1], 12);
 
     k[a0] += k[b0];
     k[a1] += k[b1];
@@ -101,8 +108,8 @@ static inline void __half_round_inline_ref(
     k[d0] ^= k[a0];
     k[d1] ^= k[a1];
 
-    k[d0] = rotl32(k[d0], 8);
-    k[d1] = rotl32(k[d1], 8);
+    k[d0] = ROL_32(k[d0], 8);
+    k[d1] = ROL_32(k[d1], 8);
 
     k[c0] += k[d0];
     k[c1] += k[d1];
@@ -110,8 +117,8 @@ static inline void __half_round_inline_ref(
     k[b0] ^= k[c0];
     k[b1] ^= k[c1];
 
-    k[b0] = rotl32(k[b0], 7);
-    k[b1] = rotl32(k[b1], 7);
+    k[b0] = ROL_32(k[b0], 7);
+    k[b1] = ROL_32(k[b1], 7);
 }
 
 static inline void __double_round_inline_ref(uint32_t k[16], uint32_t *k14, uint32_t *k15) {

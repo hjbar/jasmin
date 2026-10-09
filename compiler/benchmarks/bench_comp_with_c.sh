@@ -47,6 +47,9 @@ ROOT_DIR="$BENCH_ROOT/$TARGET_DIR"
 COMPILER_DIR=$(dirname "$BENCH_ROOT")
 COMPILER="$COMPILER_DIR/jasminc"
 UTILS_DIR="$BENCH_ROOT/utils"
+CLANG="$HOME/dev/libs/emsdk/upstream/bin/clang"
+WASMAS="$HOME/dev/libs/emsdk/upstream/bin/wasm-as"
+WASMOPT="$HOME/dev/libs/emsdk/upstream/bin/wasm-opt"
 SODIUM_JS_PATH="$HOME/dev/libs/libsodium_js/libsodium-js"
 SODIUM_JS_SIMD_PATH="$HOME/dev/libs/libsodium_js_simd/libsodium-js"
 #SPIDER_MONKEY="$HOME/.jsvu/bin/js"
@@ -84,7 +87,7 @@ else
   f_ce_exe="$ROOT_DIR/c_native/${name}.exe"
 fi
 
-gcc -mavx -mavx2 -O3 "$f_ce_c" -lsodium -lm -o "$f_ce_exe"
+"$CLANG" -w -mavx2 -O3 "$f_ce_c" -lsodium -lm -o "$f_ce_exe"
 
 
 # COMPILE C-->WASM
@@ -120,9 +123,9 @@ f_o="$ROOT_DIR/ref/${name}_ref.o"
 f_exe="$ROOT_DIR/ref/${name}_ref.exe"
 
 "$COMPILER" -arch x86-64 -pasm -nowarning "$ref_file" > "$f_s"
-gcc -O3 -I"$UTILS_DIR" -c "$f_c" -o "$f_main_o" -lm
-gcc -O3 -c "$f_s" -o "$f_o" -lm
-gcc -O3 -no-pie "$f_main_o" "$f_o" -o "$f_exe" -lm
+"$CLANG" -w -O3 -I"$UTILS_DIR" -c "$f_c" -o "$f_main_o" -lm
+"$CLANG" -w -O3 -c "$f_s" -o "$f_o" -lm
+"$CLANG" -w -O3 -no-pie "$f_main_o" "$f_o" -o "$f_exe" -lm
 
 
 # COMPILE JAZZ-->WASM
@@ -283,7 +286,7 @@ run_benchmark() {
   # JAZZ-->WASM
 
   # wasm-as
-  wasm-as --all-features "$f_wat" -o "$f_wasm"
+  "$WASMAS" --all-features "$f_wat" -o "$f_wasm"
 
   res_jazz_wasm=$(taskset --cpu-list 0 node --no-warnings "$f_js" "$loop_repeat" "$loop_iter" "${algo_args[@]}" "$VERBOSE")
   time_jazz_wasm=$(extract_time "$res_jazz_wasm")
@@ -301,7 +304,7 @@ run_benchmark() {
   fi
 
   # wasm-opt -O3
-  wasm-opt -O3 --all-features "$f_wat" -o "$f_wasm"
+  "$WASMOPT" -O3 --all-features "$f_wat" -o "$f_wasm"
 
   res_jazz_wasm_tmp=$(taskset --cpu-list 0 node --no-warnings "$f_js" "$loop_repeat" "$loop_iter" "${algo_args[@]}" "$VERBOSE")
   time_jazz_wasm_tmp=$(extract_time "$res_jazz_wasm_tmp")
@@ -322,7 +325,7 @@ run_benchmark() {
   fi
 
   # wasm-opt -O4
-  wasm-opt -O4 --all-features "$f_wat" -o "$f_wasm"
+  "$WASMOPT" -O4 --all-features "$f_wat" -o "$f_wasm"
 
   res_jazz_wasm_tmp=$(taskset --cpu-list 0 node --no-warnings "$f_js" "$loop_repeat" "$loop_iter" "${algo_args[@]}" "$VERBOSE")
   time_jazz_wasm_tmp=$(extract_time "$res_jazz_wasm_tmp")
