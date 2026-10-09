@@ -9,6 +9,7 @@ usage() {
   echo "  --mk-logs   Generate only the global-log (without compute benchmarks)"
   echo "  --rm-latex  Remove all the sub-latex (without compute benchmarks)"
   echo "  --mk-latex  Generate only the global-latex (without compute benchmarks)"
+  echo "  --lib-jade  Use equivalent Libjade algorithms instead of Libsodium"
   echo "  --all       All wasm versions considered"
   exit 1
 }
@@ -18,6 +19,7 @@ RM_LOGS=false
 MK_LOGS=false
 RM_LATEX=false
 MK_LATEX=false
+LJ=false
 ALL=false
 
 if [ "$#" -lt 1 ]; then
@@ -30,6 +32,7 @@ while [[ "$#" -gt 0 ]]; do
     --mk-logs)  MK_LOGS=true; shift ;;
     --rm-latex) RM_LATEX=true; shift ;;
     --mk-latex) MK_LATEX=true; shift ;;
+    --lib-jade) LJ=true; shift ;;
     --all)      ALL=true;     shift ;;
     -h|--help)  usage ;;
     *)
@@ -96,13 +99,19 @@ bench() {
     mkdir -p "$ROOT_DIR/$dir_name/logs"
   done
 
+  if [ "$ALL" = true ]; then
+    a_opt="-a"
+  else
+    a_opt=""
+  fi
+  if [ "$LJ" = true ]; then
+    lj_opt="-lj"
+  else
+    lj_opt=""
+  fi
   # Run scripts
   for dir_name in "${DIRNAMES[@]}"; do
-    if [ "$ALL" = true ]; then
-      bash "$ROOT_DIR/bench_comp_with_c.sh" -a $dir_name $NB_REPEAT
-    else
-      bash "$ROOT_DIR/bench_comp_with_c.sh" $dir_name $NB_REPEAT
-    fi
+    bash "$ROOT_DIR/bench_comp_with_c.sh" "$a_opt" "$lj_opt" $dir_name $NB_REPEAT
   done
 }
 

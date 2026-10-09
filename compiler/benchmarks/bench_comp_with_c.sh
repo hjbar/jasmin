@@ -7,17 +7,20 @@ BENCH_ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 usage() {
   echo "Usage: $0 [options] <folder_name> <nb_repeat>"
   echo "Options:"
+  echo "  -lj         Libjade versions considered instead of Libsodium"
   echo "  -a          All wasm versions considered"
   exit 1
 }
 
 ALL_OPT=false
+LIBJADE_OPT=false
 NB_REPEAT=""
 TARGET_DIR=""
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
     -a) ALL_OPT=true; shift ;;
+    -lj) LIBJADE_OPT=true; shift ;;
     -h|--help) usage ;;
     *)
       if [ -z "$TARGET_DIR" ] && [ -d "$BENCH_ROOT/$1" ]; then
@@ -73,19 +76,33 @@ f_ff_pf="$UTILS_DIR/firefox_polyfill.js"
 
 
 # COMPILE C-->EXE
-f_ce_c="$ROOT_DIR/c_native/${name}.c"
-f_ce_exe="$ROOT_DIR/c_native/${name}.exe"
+if [ "$LIBJADE_OPT" = true ]; then
+  f_ce_c="$ROOT_DIR/c_native_libjade/${name}.c"
+  f_ce_exe="$ROOT_DIR/c_native_libjade/${name}.exe"
+else
+  f_ce_c="$ROOT_DIR/c_native/${name}.c"
+  f_ce_exe="$ROOT_DIR/c_native/${name}.exe"
+fi
 
-gcc -O3 "$f_ce_c" -lsodium -lm -o "$f_ce_exe"
+gcc -mavx -mavx2 -O3 "$f_ce_c" -lsodium -lm -o "$f_ce_exe"
 
 
 # COMPILE C-->WASM
-f_cw_c="$ROOT_DIR/c_wasm/${name}_wasm.c"
-f_cw_wat_O0="$ROOT_DIR/c_wasm/${name}_wasm_O0.wat"
-f_cw_wat_O2="$ROOT_DIR/c_wasm/${name}_wasm_O2.wat"
-f_cw_wat_O3="$ROOT_DIR/c_wasm/${name}_wasm_O3.wat"
-f_cw_wasm="$ROOT_DIR/c_wasm/${name}_wasm.wasm"
-f_cw_js="$ROOT_DIR/main_emcc.js"
+if [ "$LIBJADE_OPT" = true ]; then
+  f_cw_c="$ROOT_DIR/c_wasm_libjade/${name}_wasm.c"
+  f_cw_wat_O0="$ROOT_DIR/c_wasm_libjade/${name}_wasm_O0.wat"
+  f_cw_wat_O2="$ROOT_DIR/c_wasm_libjade/${name}_wasm_O2.wat"
+  f_cw_wat_O3="$ROOT_DIR/c_wasm_libjade/${name}_wasm_O3.wat"
+  f_cw_wasm="$ROOT_DIR/c_wasm_libjade/${name}_wasm.wasm"
+  f_cw_js="$ROOT_DIR/main_emcc_libjade.js"
+else
+  f_cw_c="$ROOT_DIR/c_wasm/${name}_wasm.c"
+  f_cw_wat_O0="$ROOT_DIR/c_wasm/${name}_wasm_O0.wat"
+  f_cw_wat_O2="$ROOT_DIR/c_wasm/${name}_wasm_O2.wat"
+  f_cw_wat_O3="$ROOT_DIR/c_wasm/${name}_wasm_O3.wat"
+  f_cw_wasm="$ROOT_DIR/c_wasm/${name}_wasm.wasm"
+  f_cw_js="$ROOT_DIR/main_emcc.js"
+fi
 
 if [[ "$name" == *avx* ]]; then
   SODIUM_VERSION="$SODIUM_JS_SIMD_PATH"
@@ -169,29 +186,31 @@ run_benchmark() {
   # COMPILE C-->WASM
 
   # emcc -O0
-  emcc \
-    -O0 -msimd128 -msse2 -mssse3 "$f_cw_c" \
-    -I"$SODIUM_VERSION"/include \
-    "$SODIUM_VERSION"/lib/libsodium.a \
-    -s WASM=1 \
-    -s STANDALONE_WASM=1 \
-    --no-entry \
-    -o "$f_cw_wasm"
-  wasm2wat --fold-exprs "$f_cw_wasm" -o "$f_cw_wat_O0"
+  if [ "$LIBJADE_OPT" = false ]; then
+    emcc \
+      -O0 -msimd128 -msse2 -mssse3 "$f_cw_c" \
+      -I"$SODIUM_VERSION"/include \
+      "$SODIUM_VERSION"/lib/libsodium.a \
+      -s WASM=1 \
+      -s STANDALONE_WASM=1 \
+      --no-entry \
+      -o "$f_cw_wasm"
+    wasm2wat --fold-exprs "$f_cw_wasm" -o "$f_cw_wat_O0"
 
-  res_c_wasm=$(taskset --cpu-list 0 node --no-warnings "$f_cw_js" "$loop_repeat" "$loop_iter_3" "${algo_args[@]}" "$VERBOSE")
-  time_c_wasm=$(extract_time "$res_c_wasm")
-  name_c_wasm="emcc -O0 [Node]"
-  printf "\nC-->WASM [using Node and emcc -O0] :\n\n%s\n" "$res_c_wasm" | tee -a "$LOG_FILE"
-  printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
+    res_c_wasm=$(taskset --cpu-list 0 node --no-warnings "$f_cw_js" "$loop_repeat" "$loop_iter_3" "${algo_args[@]}" "$VERBOSE")
+    time_c_wasm=$(extract_time "$res_c_wasm")
+    name_c_wasm="emcc -O0 [Node]"
+    printf "\nC-->WASM [using Node and emcc -O0] :\n\n%s\n" "$res_c_wasm" | tee -a "$LOG_FILE"
+    printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
 
-  res_c_wasm_tmp=$(taskset --cpu-list 0 "$SPIDER_MONKEY" -f "$f_ff_pf" -f "$f_cw_js" -- "$loop_repeat" "$loop_iter_4" "${algo_args[@]}" "$VERBOSE")
-  time_c_wasm_tmp=$(extract_time "$res_c_wasm_tmp")
-  printf "\nC-->WASM [using Firefox and emcc -O0] :\n\n%s\n" "$res_c_wasm_tmp" | tee -a "$LOG_FILE"
-  printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
-  if [ "$(echo "$time_c_wasm_tmp < $time_c_wasm" | bc -l)" -eq 1 ]; then
-    time_c_wasm=$time_c_wasm_tmp
-    name_c_wasm="emcc -O0 [Firefox]"
+    res_c_wasm_tmp=$(taskset --cpu-list 0 "$SPIDER_MONKEY" -f "$f_ff_pf" -f "$f_cw_js" -- "$loop_repeat" "$loop_iter_4" "${algo_args[@]}" "$VERBOSE")
+    time_c_wasm_tmp=$(extract_time "$res_c_wasm_tmp")
+    printf "\nC-->WASM [using Firefox and emcc -O0] :\n\n%s\n" "$res_c_wasm_tmp" | tee -a "$LOG_FILE"
+    printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
+    if [ "$(echo "$time_c_wasm_tmp < $time_c_wasm" | bc -l)" -eq 1 ]; then
+      time_c_wasm=$time_c_wasm_tmp
+      name_c_wasm="emcc -O0 [Firefox]"
+    fi
   fi
 
   # emcc -O2
@@ -205,13 +224,21 @@ run_benchmark() {
     -o "$f_cw_wasm"
   wasm2wat --fold-exprs "$f_cw_wasm" -o "$f_cw_wat_O2"
 
-  res_c_wasm_tmp=$(taskset --cpu-list 0 node --no-warnings "$f_cw_js" "$loop_repeat" "$loop_iter_3" "${algo_args[@]}" "$VERBOSE")
-  time_c_wasm_tmp=$(extract_time "$res_c_wasm_tmp")
-  printf "\nC-->WASM [using Node and emcc -O2] :\n\n%s\n" "$res_c_wasm_tmp" | tee -a "$LOG_FILE"
-  printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
-  if [ "$(echo "$time_c_wasm_tmp < $time_c_wasm" | bc -l)" -eq 1 ]; then
-    time_c_wasm=$time_c_wasm_tmp
+  if [ "$LIBJADE_OPT" = true ]; then
+    res_c_wasm=$(taskset --cpu-list 0 node --no-warnings "$f_cw_js" "$loop_repeat" "$loop_iter_3" "${algo_args[@]}" "$VERBOSE")
+    time_c_wasm=$(extract_time "$res_c_wasm")
     name_c_wasm="emcc -O2 [Node]"
+    printf "\nC-->WASM [using Node and emcc -O2] :\n\n%s\n" "$res_c_wasm" | tee -a "$LOG_FILE"
+    printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
+  else
+    res_c_wasm_tmp=$(taskset --cpu-list 0 node --no-warnings "$f_cw_js" "$loop_repeat" "$loop_iter_3" "${algo_args[@]}" "$VERBOSE")
+    time_c_wasm_tmp=$(extract_time "$res_c_wasm_tmp")
+    printf "\nC-->WASM [using Node and emcc -O2] :\n\n%s\n" "$res_c_wasm_tmp" | tee -a "$LOG_FILE"
+    printf "\n%s\n" "$SEP3" | tee -a "$LOG_FILE"
+    if [ "$(echo "$time_c_wasm_tmp < $time_c_wasm" | bc -l)" -eq 1 ]; then
+      time_c_wasm=$time_c_wasm_tmp
+      name_c_wasm="emcc -O2 [Node]"
+    fi
   fi
 
   res_c_wasm_tmp=$(taskset --cpu-list 0 "$SPIDER_MONKEY" -f "$f_ff_pf" -f "$f_cw_js" -- "$loop_repeat" "$loop_iter_4" "${algo_args[@]}" "$VERBOSE")

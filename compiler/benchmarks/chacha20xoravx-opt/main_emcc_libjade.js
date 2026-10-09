@@ -1,5 +1,5 @@
 // SpiderMonkey
-globalThis.__currentAlgoDir = 'chacha20xor-opt';
+globalThis.__currentAlgoDir = 'chacha20xoravx-opt';
 
 
 // Import libraries
@@ -10,8 +10,8 @@ const { mainChachaXor } = require('../utils/chacha20xor_shared');
 // Main function
 async function main() {
 
-  const { exports, memory } = await initWasmEmcc(__dirname, 'c_wasm', 'chacha20xor-opt_wasm.wasm');
-  const fn = exports.jade_stream_chacha_chacha20_amd64_ref_xor;
+  const { exports, memory } = await initWasmEmcc(__dirname, 'c_wasm_libjade', 'chacha20xoravx-opt_wasm.wasm');
+  const fn = exports.jade_stream_chacha_chacha20_amd64_avx_xor;
   mainChachaXor(memory, fn, withBigInt = false);
 
 }

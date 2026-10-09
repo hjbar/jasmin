@@ -96,7 +96,7 @@ globalThis.require = function(modulePath) {
 
         if (!cleanPath.startsWith(currentDir) && currentDir !== '.') {
           cleanPath = currentDir + '/' + cleanPath;
-        } else if ((cleanPath.startsWith('prog/') || cleanPath.startsWith('c_wasm/')) && typeof globalThis.__currentAlgoDir !== 'undefined') {
+        } else if ((cleanPath.startsWith('prog/') || cleanPath.startsWith('c_wasm/') || cleanPath.startsWith('c_wasm_libjade/')) && typeof globalThis.__currentAlgoDir !== 'undefined') {
           cleanPath = globalThis.__currentAlgoDir + '/' + cleanPath;
         }
 

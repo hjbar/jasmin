@@ -10,7 +10,7 @@ const { mainChacha } = require('../utils/chacha20_shared');
 // Main function
 async function main() {
 
-  const { exports, memory } = await initWasmEmcc(__dirname, 'chacha20-opt_wasm.wasm');
+  const { exports, memory } = await initWasmEmcc(__dirname, 'c_wasm', 'chacha20-opt_wasm.wasm');
   const fn = exports.jade_stream_chacha_chacha20_amd64_ref;
   mainChacha(memory, fn, withBigInt = false);
 

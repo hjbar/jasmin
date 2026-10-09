@@ -37,9 +37,9 @@ async function initWasm(dir, filename) {
 
 
 // Init Wasm module compiled with Emcc
-async function initWasmEmcc(dir, filename) {
+async function initWasmEmcc(dir, ver, filename) {
 
-  const wasmPath = path.resolve(dir, 'c_wasm', filename);
+  const wasmPath = path.resolve(dir, ver, filename);
   const wasmBuffer = fs.readFileSync(wasmPath);
 
   const wasi = new WASI({ version: 'preview1' });

@@ -10,7 +10,7 @@ const { mainSha } = require('../utils/sha256_shared');
 // Main function
 async function main() {
 
-  const { exports, memory } = await initWasmEmcc(__dirname, 'c_wasm', 'sha256-opt_wasm.wasm');
+  const { exports, memory } = await initWasmEmcc(__dirname, 'c_wasm_libjade', 'sha256-opt_wasm.wasm');
   const fn = exports.jade_hash_sha256_amd64_ref;
   mainSha(memory, fn, withBigInt = false);
 
