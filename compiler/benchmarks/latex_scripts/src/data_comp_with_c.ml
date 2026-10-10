@@ -5,12 +5,26 @@ type data = {
 }
 
 and value_kind =
+  (* Times *)
+  | Time_C_EXE
+  | Time_JAZZ_EXE
+  | Time_C_WASM
+  | Time_JAZZ_WASM
   (* Ratio with All *)
   | Ratio_CExe_JazzExe
   | Ratio_CWasm_JazzWasm
 
 (* Global values *)
-let value_kinds = [ Ratio_CExe_JazzExe; Ratio_CWasm_JazzWasm ]
+let value_kinds =
+  [
+    Time_C_EXE;
+    Time_JAZZ_EXE;
+    Time_C_WASM;
+    Time_JAZZ_WASM;
+    Ratio_CExe_JazzExe;
+    Ratio_CWasm_JazzWasm;
+  ]
+
 
 (* Utils functions *)
 let rename_names str =
@@ -99,7 +113,7 @@ let make_data lines =
 
   let values = Hashtbl.create 16 in
   List.iteri
-    (fun i kind -> Hashtbl.replace values kind (float_of_line (i + 6)))
+    (fun i kind -> Hashtbl.replace values kind (float_of_line (i + 2)))
     value_kinds;
 
   { names; values }

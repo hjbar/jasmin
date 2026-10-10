@@ -1,6 +1,6 @@
 MAIN = plots/plot
 LATEXMK = latexmk -pdfxe -pdfxelatex="xelatex --interactionmode=nonstop -shell-escape" -bibtex -outdir=plots
-EXEC = dune exec src/main.exe -- $(ARG) $(KIND)
+EXEC = dune exec src/main.exe -- $(ARG) $(KIND) $(VERSION)
 
 
 all: init format build
