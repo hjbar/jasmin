@@ -1083,8 +1083,8 @@ let get_func ~(rsp_addr : Z.t) ~(rip_addr : Z.t) ~(rsp : 'len gvar) ~(rip : 'len
   let export = if FInfo.is_export func.f_cc then Some func_name else None in
   (def, export)
 
-let get_funcs ~(rsp_addr : Z.t) ~(rsp : 'len gvar) ~(rip_addr : Z.t) ~(rip : 'len gvar) (p_funcs : ('info, 'asm) sfundef list) : func list * funname list =
-  let _rsp_addr, defs, exports =
+let get_funcs ~(rsp_addr : Z.t) ~(rsp : 'len gvar) ~(rip_addr : Z.t) ~(rip : 'len gvar) (p_funcs : ('info, 'asm) sfundef list) : Z.t * func list * funname list =
+  let rsp_addr, defs, exports =
     List.fold_left (
       fun (rsp_addr, defs, exports) ((extra, _func) as p_funcs) ->
         let (def, export) = get_func ~rsp_addr ~rsp ~rip_addr ~rip p_funcs in
@@ -1099,11 +1099,15 @@ let get_funcs ~(rsp_addr : Z.t) ~(rsp : 'len gvar) ~(rip_addr : Z.t) ~(rip : 'le
 
   let defs = List.rev defs in
   let exports = List.rev exports in
-  (defs, exports)
+  (rsp_addr, defs, exports)
 
 (* -------------------------------------------------------------------- *)
 
-let get_memory ~(mem_link : linkage) ~(mem_env : name option) ~(mem_name : name) ~(mem_min : num) ~(mem_max : num option) : mem list =
+let get_min_pages (mem_size : Z.t) : Z.t =
+  Z.max one (Z.shift_right (mem_size -@ one) 16 +@ one) (* max 1 (((mem_size - 1) / 65536) + 1) *)
+
+let get_memory ~(mem_link : linkage) ~(mem_env : name option) ~(mem_name : name) ~(mem_max : num option) ~(last_rsp_addr : Z.t) : mem list =
+  let mem_min = get_min_pages last_rsp_addr in
   [ { mem_link; mem_env ; mem_name ; mem_min ; mem_max } ]
 
 (* -------------------------------------------------------------------- *)
@@ -1150,17 +1154,23 @@ let get_rsp_addr ~(rip_addr : Z.t) (sp_globs : Word.word list) : Z.t =
 
 (* -------------------------------------------------------------------- *)
 
-let compile_prog ~(mod_name : name) ~(mem_link : linkage) ~(mem_env : name option) ~(mem_name : name) ~(mem_min : num) ~(mem_max : num option) ~(import_env : name) ~(rip_addr : num)
-                  ((funcs : ('info, 'asm) sfundef list), ({ sp_rsp ; sp_rip ; sp_globs ; _ } : E.sprog_extra)) : Wasm_ast.wasm_module =
-  let rsp = sp_rsp in
+let compile_prog ~(mod_name : name) ((funcs : ('info, 'asm) sfundef list), ({ sp_rsp ; sp_rip ; sp_globs ; _ } : E.sprog_extra)) : Wasm_ast.wasm_module =
   let rip = sp_rip in
+  let rip_addr = Z.of_int 10000 in
+  let rsp = sp_rsp in
   let rsp_addr = get_rsp_addr ~rip_addr sp_globs in
+  let last_rsp_addr, mod_funcs, mod_exports = get_funcs ~rsp_addr ~rip_addr ~rsp ~rip funcs in
 
-  let mod_mems = get_memory ~mem_link ~mem_env ~mem_name ~mem_min ~mem_max in
+  let (mem_link, mem_env) = Wasm_ast.(if !export_memory then (Export, None) else (Import, Some "env")) in
+  let mem_name = "memory" in
+  let mem_max = None in
+  let mod_mems = get_memory ~mem_link ~mem_env ~mem_name ~mem_max ~last_rsp_addr in
+
+  let import_env = "env" in
   let mod_imports = get_imports ~import_env funcs in
+
   let mod_datas = get_datas ~rip_addr sp_globs in
   let mod_decls = get_decls funcs in
-  let mod_funcs, mod_exports = get_funcs ~rsp_addr ~rip_addr ~rsp ~rip funcs in
   let mod_init = None in
   let mod_start = None in
 

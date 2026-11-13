@@ -1,0 +1,36 @@
+param int LEN = 55537;
+
+
+export fn main_test(reg u32 x) -> reg u32 {
+
+  stack u8[LEN] t;
+  reg u32 tmp;
+  reg u32 val;
+  reg u32 res;
+  reg u64 k;
+  reg u64 j;
+  reg u64 i;
+
+  i = 0;
+  j = 0;
+  k = 0;
+  while (i < LEN) {
+    val = j;
+    t[k] = val;
+    i += 1;
+    j += 1;
+    k += 1;
+  }
+
+  res = 0;
+  i = 0;
+  j = 0;
+  while (i < LEN) {
+    tmp = (32u)t[j];
+    res += tmp;
+    i += 1;
+    j += 1;
+  }
+
+  return res;
+}
