@@ -9,7 +9,7 @@ let parse_command_line () =
   match !parsed_args with
   | [
    (("libsodium" | "libjade") as version);
-   (("backends" | "comp_with_c") as kind);
+   (("backends" | "comp_with_c" | "comp_with_wasmtime") as kind);
    filename;
   ] ->
     (filename, kind, version)
@@ -35,4 +35,5 @@ let () =
   match kind with
   | "backends" -> Main_backends.main lines
   | "comp_with_c" -> Main_comp_with_c.main lines version
+  | "comp_with_wasmtime" -> Main_comp_with_wasmtime.main lines
   | _ -> exit 1

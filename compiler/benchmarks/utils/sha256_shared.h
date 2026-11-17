@@ -25,7 +25,7 @@ void bench_init(int argc, char *argv[]) {
 
 // BENCHMARK FUNCTION
 inline void bench_run(void) {
-    SHA_FUNC(hash, input, input_length);
+  SHA_FUNC(hash, input, input_length);
 }
 
 
